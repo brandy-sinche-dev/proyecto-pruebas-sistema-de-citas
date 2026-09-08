@@ -8,6 +8,11 @@ dist/
 build/
 coverage/
 *.local
+# .env del frontend (local no se sube)
+.env.local
+.env.development.*
+.env.test.*
+.env.production.*
 
 # Python / backend
 __pycache__/
@@ -25,6 +30,9 @@ htmlcov/
 .env
 .env.*
 !.env.example
+**/.env
+**/.env.*
+!**/.env.example
 
 # Logs
 *.log

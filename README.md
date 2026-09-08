@@ -16,8 +16,8 @@ Regla principal del proyecto: **no crear un prototipo vacío ni mocks como susti
 
 | Capa | Tecnología |
 | --- | --- |
-| Frontend | React 19 + TypeScript + Vite + Tailwind CSS + pnpm |
-| Backend | Django + Django REST Framework + uv |
+| Frontend | React 19 + TypeScript + Vite + Tailwind CSS + pnpm (o npm) |
+| Backend | Django + Django REST Framework + uv (o pip/python) |
 | Base de datos | PostgreSQL |
 | Auth | JWT |
 | Testing backend | pytest + pytest-django + pytest-cov |
@@ -34,7 +34,7 @@ Monorepo:
 ```
 proyecto-pruebas/
 ├── frontend/            # React + TypeScript + Vite + Tailwind
-├── backend/             # Django + DRF + uv
+├── backend/             # Django + DRF + uv/pip + requirements.txt
 ├── tests/e2e/           # Playwright
 ├── docker/              # Dockerfiles y config de contenedores
 ├── docs/                # Documentación y matriz de pruebas
@@ -47,9 +47,21 @@ Frontend por features: `auth`, `patients`, `doctors`, `specialties`, `schedules`
 
 ## Requisitos
 
+Ejecutar con contenedores:
+
 - Docker Desktop / Docker Engine con Compose.
 
+Ejecutar en local sin Docker (ver más abajo):
+
+- Node.js 20+ y **npm** (gestor de paquetes frontend) — pnpm es opcional.
+- Python 3.12+ y **pip** (backend) — uv es opcional.
+- PostgreSQL local (o SQLite para desarrollo rápido).
+
 ## Inicio rápido
+
+### Con Docker (recomendado)
+
+Los archivos `.env` nunca se suben al repositorio (ver `.gitignore`). Copiar `.env.example` a `.env` y ajustar los valores:
 
 1. Clonar el repositorio.
 2. Copiar `.env.example` a `.env`.
@@ -74,6 +86,53 @@ docker compose exec backend uv run python manage.py seed_demo
 6. Abrir el frontend en el navegador.
 7. Abrir Swagger de la API.
 
+### Sin Docker (con npm y py, sin uv)
+
+Alternativa en local, sin contenedores. El backend está preparado para ejecutarse tanto con `uv` como con `pip`/`python` (`backend/requirements.txt`), y el frontend con `npm` o `pnpm`.
+
+> Compose dev ya ejecuta `migrate` y `seed_demo` automáticamente al arrancar. En local hay que hacerlos a mano (pasos 1 y 2).
+
+**Backend (Python con pip, sin uv):**
+
+```bash
+cd backend
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# Linux/macOS
+source .venv/bin/activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py seed_demo
+python manage.py runserver 0.0.0.0:8000
+```
+
+**Frontend (npm):**
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+**Tests, lint y build (npm):**
+
+```bash
+cd frontend
+npm run lint
+npm test
+npm run test:coverage
+npm run build
+```
+
+**Tests del backend (py, sin uv):**
+
+```bash
+cd backend
+pip install -r requirements.txt
+pytest
+```
+
 ## Comandos
 
 ### Docker
@@ -96,6 +155,19 @@ uv run python manage.py seed_demo
 uv run pytest
 ```
 
+### Backend (Python con pip, sin uv)
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate   # Windows
+source .venv/bin/activate  # Linux/macOS
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py seed_demo
+pytest
+```
+
 ### Frontend (pnpm)
 
 ```bash
@@ -104,7 +176,18 @@ pnpm build
 pnpm lint
 pnpm test
 pnpm test:coverage
-pnpm test:e2e
+```
+
+### Frontend (npm, sin pnpm)
+
+Los comandos son los mismos declarados en `frontend/package.json`, ejecutados con `npm`:
+
+```bash
+npm run dev
+npm run build
+npm run lint
+npm test
+npm run test:coverage
 ```
 
 ## Testing
@@ -144,7 +227,7 @@ Solo se usarán credenciales artificiales de desarrollo (generadas por el `seed_
 
 ## CI/CD
 
-GitHub Actions ejecuta en cada push y Pull Request: lint/checks del backend, tests + cobertura del backend, instalación y lint del frontend, tests + cobertura del frontend, build del frontend, build Docker, tests de integración/API y E2E.
+GitHub Actions ejecuta en cada push y Pull Request: lint/checks del backend, tests + cobertura del backend, instalación y lint del frontend, tests + cobertura del frontend, build del frontend, build Docker y tests de integración/API. E2E (Playwright) se incorporará al pipeline cuando se configure la suite E2E.
 
 ## Calidad
 
