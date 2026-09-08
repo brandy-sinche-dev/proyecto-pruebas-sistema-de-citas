@@ -1,0 +1,49 @@
+# Carpetas de trabajo del proyecto (no subir)
+skills/
+interfaces/
+
+# Node / frontend
+node_modules/
+dist/
+build/
+coverage/
+*.local
+
+# Python / backend
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+
+# Entorno / secretos
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Base de datos
+*.sqlite3
+*.db
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
