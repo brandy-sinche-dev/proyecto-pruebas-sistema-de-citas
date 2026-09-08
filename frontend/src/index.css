@@ -1,0 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    overscroll-behavior: none;
+  }
+
+  body {
+    font-family: 'Hanken Grotesk', system-ui, sans-serif;
+    background-color: theme('colors.surface');
+    color: theme('colors.on-surface');
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar,
+  *::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  * {
+    scrollbar-width: none;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-surface-container-lowest rounded-lg border border-slate-200 shadow-tier1;
+  }
+
+  .btn-primary {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded px-4 font-display text-sm font-semibold text-on-primary bg-primary transition-colors hover:bg-blue-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded border border-slate-300 bg-transparent px-4 font-display text-sm font-semibold text-primary transition-colors hover:bg-surface-bright hover:border-slate-400;
+  }
+
+  .btn-health {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded bg-secondary px-4 font-display text-sm font-semibold text-on-secondary transition-colors hover:bg-teal-700;
+  }
+
+  .btn-destructive {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded border border-danger-200 bg-danger-50 px-4 font-display text-sm font-semibold text-danger-700 transition-colors hover:bg-red-100;
+  }
+
+  .input {
+    @apply h-10 w-full rounded border border-slate-300 bg-white px-3 text-on-surface placeholder:text-slate-400 focus:border-secondary focus:outline-2 focus:outline-none focus:ring-2 focus:ring-secondary/30;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-semibold text-slate-700;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+}
