@@ -1,12 +1,9 @@
 import { mockApi } from './mock/mockApi'
+import { realApi, toDisplayError } from './http'
 
-export const isMock = true
+export const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
 
-export const api = mockApi
+export const api = isMock ? mockApi : realApi
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1'
-
-export function toDisplayError(error: unknown): string {
-  if (error instanceof Error) return error.message
-  return 'Ocurrió un error inesperado'
-}
+export { API_BASE_URL, realApi } from './http'
+export { toDisplayError }

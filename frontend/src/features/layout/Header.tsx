@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { roleLabels } from './navigation'
 import { Avatar } from '@/components/ui/Avatar'
@@ -24,9 +25,15 @@ const portalTitles: Record<PortalKey, string> = {
 }
 
 export function Header({ portal }: { portal: string }) {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
   if (!user) return null
   const key = getPortalKey(portal)
+
+  function handleLogout() {
+    logout()
+    navigate('/login', { replace: true })
+  }
 
   return (
     <header className="fixed left-0 right-0 top-0 z-50 flex h-16 items-center justify-between gap-4 border-b border-slate-200 bg-white/90 px-4 shadow-header backdrop-blur-xl md:px-6">
@@ -90,6 +97,16 @@ export function Header({ portal }: { portal: string }) {
             <span className="block text-xs leading-tight text-secondary">{roleLabels[user.role]}</span>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-on-surface-variant transition-colors hover:bg-danger-50 hover:text-danger-700"
+          aria-label="Cerrar sesión"
+          title="Cerrar sesión"
+        >
+          <span className="material-symbols-outlined text-base">logout</span>
+          <span className="hidden md:inline">Salir</span>
+        </button>
       </div>
     </header>
   )
