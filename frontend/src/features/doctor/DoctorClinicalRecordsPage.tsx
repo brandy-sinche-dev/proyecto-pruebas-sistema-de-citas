@@ -34,7 +34,7 @@ export function DoctorClinicalRecordsPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader title="Notas de evolución" subtitle="Registra diagnóstico, tratamiento y seguimiento" icon={<span className="material-symbols-outlined text-lg">monitor_heart</span>} />
+          <CardHeader title="Notas de evolución" subtitle="Registra diagnóstico, tratamiento y seguimiento" icon={<span className="material-symbols-outlined text-lg">ecg</span>} />
           <CardBody className="flex flex-col gap-3">
             {mine.length === 0 && <p className="text-sm text-on-surface-variant">Aún no hay notas clínicas registradas.</p>}
             {mine.map((note) => {

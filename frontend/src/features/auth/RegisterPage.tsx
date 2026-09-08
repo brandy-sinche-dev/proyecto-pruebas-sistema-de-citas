@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import { toDisplayError } from '@/services'
+import { api, toDisplayError } from '@/services'
 import { registerSchema, type RegisterFormValues } from '@/schemas'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -27,6 +27,13 @@ export function RegisterPage() {
   async function onSubmit(values: RegisterFormValues) {
     setError(null)
     try {
+      await api.register({
+        firstName: values.firstName,
+        lastName: values.lastName,
+        email: values.email,
+        username: values.username,
+        password: values.password,
+      })
       const user = await login({ username: values.username, password: values.password })
       if (user) navigate('/paciente')
     } catch (err) {

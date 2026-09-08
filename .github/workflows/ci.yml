@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend lint + tests + coverage
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+      - name: uv sync --frozen
+        run: uv sync --frozen
+      - name: Ruff format check
+        run: uv run ruff format --check .
+      - name: Ruff lint check
+        run: uv run ruff check .
+      - name: Django checks + migrations
+        run: |
+          uv run python manage.py check
+          uv run python manage.py makemigrations --check --dry-run
+      - name: Tests + coverage
+        run: uv run pytest --cov-report=html
+      - name: Upload coverage backend
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-backend
+          path: backend/htmlcov
+          if-no-files-found: ignore
+          retention-days: 7
+
+  frontend:
+    name: Frontend lint + tests + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Enable corepack
+        run: corepack enable
+      - name: pnpm install (frozen)
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint
+      - name: Tests + coverage
+        run: pnpm test -- --coverage
+      - name: Build
+        run: pnpm build
+      - name: Upload coverage frontend
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-frontend
+          path: frontend/coverage
+          if-no-files-found: ignore
+          retention-days: 7
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build images
+        run: |
+          docker compose build backend
+          docker compose build frontend
+
+  integration:
+    name: Integración / API sobre PostgreSQL
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Levantar stack completo
+        run: docker compose up -d --wait
+      - name: Esperar healthcheck backend
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8000/api/v1/health/ >/dev/null 2>&1; then
+              echo "backend sano"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "el backend no arrancó en tiempo"
+          docker compose logs backend
+          exit 1
+      - name: Smoke test API
+        run: |
+          set -e
+          H=$(curl -fsS http://localhost:8000/api/v1/health/)
+          echo "health: $H"
+          TOKEN=$(curl -fsS -X POST http://localhost:8000/api/v1/auth/login/ \
+            -H "Content-Type: application/json" \
+            -d '{"username":"admin","password":"ClinicaAngry1"}' | python -c "import sys,json;print(json.load(sys.stdin)['access'])")
+          echo "login admin OK"
+          DOCTORS=$(curl -fsS http://localhost:8000/api/v1/doctors/ -H "Authorization: Bearer $TOKEN")
+          echo "$DOCTORS" | python -c "import sys,json;d=json.load(sys.stdin);assert d['count']>0, 'sin doctores';print('doctores:', d['count'])"
+          SPECS=$(curl -fsS http://localhost:8000/api/v1/specialties/ -H "Authorization: Bearer $TOKEN")
+          echo "$SPECS" | python -c "import sys,json;d=json.load(sys.stdin);assert d['count']>0, 'sin especialidades';print('especialidades:', d['count'])"
+      - name: Logs en fallo
+        if: failure()
+        run: docker compose logs backend

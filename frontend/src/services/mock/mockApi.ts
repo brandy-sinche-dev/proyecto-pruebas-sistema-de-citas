@@ -23,12 +23,12 @@ const tomorrowISO = new Date(Date.now() + day).toISOString().split('T')[0]
 const nextWeekISO = new Date(Date.now() + 7 * day).toISOString().split('T')[0]
 
 export const specialties: Specialty[] = [
-  { id: 1, name: 'Cardiología', color: '#0D9488', icon: 'monitor_heart' },
-  { id: 2, name: 'Pediatría', color: '#0284C7', icon: 'child_care' },
-  { id: 3, name: 'Dermatología', color: '#7C3AED', icon: 'skin' },
-  { id: 4, name: 'Ginecología', color: '#DB2777', icon: 'pregnant_woman' },
+  { id: 1, name: 'Cardiología', color: '#0D9488', icon: 'cardiology' },
+  { id: 2, name: 'Pediatría', color: '#0284C7', icon: 'pediatrics' },
+  { id: 3, name: 'Dermatología', color: '#7C3AED', icon: 'dermatology' },
+  { id: 4, name: 'Ginecología', color: '#DB2777', icon: 'gynecology' },
   { id: 5, name: 'Traumatología', color: '#EA580C', icon: 'orthopedics' },
-  { id: 6, name: 'Medicina General', color: '#64748B', icon: 'medical_services' },
+  { id: 6, name: 'Medicina General', color: '#64748B', icon: 'stethoscope' },
 ]
 
 export const doctors: Doctor[] = [

@@ -36,7 +36,7 @@ export function AdminSpecialtiesPage() {
                   style={{ backgroundColor: s.color ?? '#0F2942' }}
                   aria-hidden="true"
                 >
-                  {s.icon ?? 'local_hospital'}
+                  {s.icon ?? 'emergency'}
                 </span>
                 <span className="badge-pill border border-slate-200 bg-surface-bright text-on-surface-variant">
                   {doctorCount} médico{doctorCount === 1 ? '' : 's'}

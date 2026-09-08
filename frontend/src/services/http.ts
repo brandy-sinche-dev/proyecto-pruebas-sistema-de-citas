@@ -25,9 +25,12 @@ const http: AxiosInstance = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+const PUBLIC_PATHS = ['/auth/login/', '/auth/register/', '/auth/refresh/', '/health/']
+
 http.interceptors.request.use((config) => {
+  const isPublic = PUBLIC_PATHS.some((p) => config.url?.includes(p))
   const token = localStorage.getItem(ACCESS_KEY)
-  if (token) {
+  if (token && !isPublic) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config

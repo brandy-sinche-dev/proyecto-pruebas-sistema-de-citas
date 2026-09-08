@@ -27,7 +27,7 @@ export function PatientHistoryPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Notas médicas" subtitle="Diagnósticos y tratamientos indicados" icon={<span className="material-symbols-outlined text-lg">monitor_heart</span>} />
+          <CardHeader title="Notas médicas" subtitle="Diagnósticos y tratamientos indicados" icon={<span className="material-symbols-outlined text-lg">ecg</span>} />
           <CardBody className="flex flex-col gap-3">
             {mineNotes.length === 0 && <p className="text-sm text-on-surface-variant">Aún no tienes notas médicas registradas.</p>}
             {mineNotes.map((note) => (

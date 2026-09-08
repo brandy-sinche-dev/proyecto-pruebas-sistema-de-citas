@@ -29,7 +29,7 @@ afterEach(() => {
 describe('LoginPage', () => {
   it('muestra las cuentas de demostración', () => {
     renderWithProviders()
-    expect(screen.getByText('Cuentas de demostración (mock)')).toBeInTheDocument()
+    expect(screen.getByText('Cuentas de demostración (API real)')).toBeInTheDocument()
     expect(screen.getByText('@admin')).toBeInTheDocument()
     expect(screen.getByText('@dra.ramos')).toBeInTheDocument()
     expect(screen.getByText('@paciente')).toBeInTheDocument()

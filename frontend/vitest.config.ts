@@ -6,6 +6,9 @@ const root = process.cwd()
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    'import.meta.env.VITE_USE_MOCK': JSON.stringify('true'),
+  },
   resolve: {
     alias: {
       '@': path.resolve(root, 'src'),

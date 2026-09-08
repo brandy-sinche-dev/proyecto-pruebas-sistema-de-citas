@@ -118,7 +118,7 @@ export function LoginPage() {
 
           <div className="mt-6 rounded-lg border border-slate-200 bg-surface-container-lowest p-4">
             <p className="font-display text-xs font-semibold uppercase tracking-wider text-outline">
-              Cuentas de demostración (mock)
+              Cuentas de demostración (API real)
             </p>
             <div className="mt-3 grid grid-cols-2 gap-2">
               {demoUsers.map((demo) => (
@@ -127,7 +127,7 @@ export function LoginPage() {
                   type="button"
                   onClick={() => {
                     setValue('username', demo.username)
-                    setValue('password', 'demo123')
+                    setValue('password', 'ClinicaAngry1')
                   }}
                   className="flex items-center gap-2 rounded-lg border border-slate-200 bg-surface-bright px-3 py-2 text-xs text-on-surface hover:border-secondary hover:bg-success-50"
                 >
@@ -140,7 +140,7 @@ export function LoginPage() {
               ))}
             </div>
             <p className="mt-3 text-xs text-on-surface-variant">
-              Cualquier contraseña de 6+ caracteres funciona en el modo demo (ej. <code>demo123</code>).
+              Contraseña común del seed: <code>ClinicaAngry1</code>
             </p>
           </div>
 

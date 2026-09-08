@@ -16,12 +16,12 @@ from apps.users.models import User
 PASSWORD = "ClinicaAngry1"
 
 SPECIALTIES = [
-    ("Cardiología", "#0D9488", "monitor_heart"),
-    ("Pediatría", "#0284C7", "child_care"),
-    ("Dermatología", "#7C3AED", "skin"),
-    ("Ginecología", "#DB2777", "pregnant_woman"),
+    ("Cardiología", "#0D9488", "cardiology"),
+    ("Pediatría", "#0284C7", "pediatrics"),
+    ("Dermatología", "#7C3AED", "dermatology"),
+    ("Ginecología", "#DB2777", "gynecology"),
     ("Traumatología", "#EA580C", "orthopedics"),
-    ("Medicina General", "#64748B", "medical_services"),
+    ("Medicina General", "#64748B", "stethoscope"),
 ]
 
 # id_mock, nombre, especialidad, email, telefono, licencia, box, disponible, username

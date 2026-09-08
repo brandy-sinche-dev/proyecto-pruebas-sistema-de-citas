@@ -54,7 +54,7 @@ export function PatientDashboardPage() {
                   {next.box ?? 'Box por confirmar'}
                 </p>
               </div>
-              <span className="material-symbols-outlined rounded-xl bg-primary-fixed p-4 text-4xl text-primary">medical_services</span>
+              <span className="material-symbols-outlined rounded-xl bg-primary-fixed p-4 text-4xl text-primary">stethoscope</span>
             </div>
           ) : (
             <p className="mt-4 text-sm text-on-surface-variant">No tienes citas programadas. Agenda una nueva cita con tus especialistas de confianza.</p>
@@ -94,7 +94,7 @@ export function PatientDashboardPage() {
           {(specialties ?? []).map((s) => (
             <Link key={s.id} to="/paciente/agendar" className="card flex flex-col items-center gap-2 p-4 text-center transition-shadow hover:shadow-tier2">
               <span className="material-symbols-outlined rounded-lg p-2 text-2xl text-on-primary" style={{ backgroundColor: s.color ?? '#0F2942' }}>
-                {s.icon ?? 'local_hospital'}
+                {s.icon ?? 'emergency'}
               </span>
               <span className="text-sm font-semibold text-primary">{s.name}</span>
             </Link>

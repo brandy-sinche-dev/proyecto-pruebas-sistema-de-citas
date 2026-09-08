@@ -27,7 +27,7 @@ export function PatientSpecialtiesPage() {
             <Card key={s.id} className="p-5 transition-shadow hover:shadow-tier2">
               <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined rounded-lg p-2 text-3xl text-on-primary" style={{ backgroundColor: s.color ?? '#0F2942' }}>
-                  {s.icon ?? 'local_hospital'}
+                  {s.icon ?? 'emergency'}
                 </span>
                 <h3 className="font-display text-lg font-semibold text-primary">{s.name}</h3>
               </div>
