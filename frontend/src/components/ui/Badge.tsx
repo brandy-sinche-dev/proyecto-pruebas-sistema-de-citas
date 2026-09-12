@@ -14,6 +14,11 @@ export const statusStyles: Record<AppointmentStatus, { label: string; className:
     className: 'bg-warning-50 text-warning-800 border-warning-200',
     dot: 'bg-amber-500',
   },
+  CHECKED_IN: {
+    label: 'En consulta',
+    className: 'bg-info-50 text-info-800 border-info-200',
+    dot: 'bg-cyan-600',
+  },
   COMPLETED: {
     label: 'Atendida',
     className: 'bg-scheduled-50 text-scheduled-700 border-scheduled-200',

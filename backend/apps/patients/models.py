@@ -10,6 +10,10 @@ class PatientProfile(models.Model):
     birth_date = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=1, choices=GENDERS, blank=True, default="")
     blood_type = models.CharField(max_length=8, blank=True, default="")
+    insurance = models.ForeignKey(
+        "finances.Insurance", on_delete=models.SET_NULL, null=True, blank=True, related_name="patients"
+    )
+    policy_number = models.CharField(max_length=64, blank=True, default="")
     medical_history = models.JSONField(default=list, blank=True)
 
     class Meta:

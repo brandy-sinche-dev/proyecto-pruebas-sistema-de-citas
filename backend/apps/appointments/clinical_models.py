@@ -1,5 +1,7 @@
 from django.db import models
 
+from apps.users.choices import ExamCategory, ExamStatus
+
 
 class Medication(models.Model):
     name = models.CharField(max_length=120)
@@ -31,8 +33,9 @@ class Prescription(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.code:
-            year = self.appointment.date.year
-            self.code = f"RX-{year}-{Prescription.objects.filter(appointment__date__year=year).count() + 1:04d}"
+            from .services import next_prescription_code
+
+            self.code = next_prescription_code(self)
         super().save(*args, **kwargs)
 
 
@@ -51,3 +54,24 @@ class ConsultationNote(models.Model):
 
     def __str__(self) -> str:
         return f"Nota #{self.pk} — cita {self.appointment.code}"
+
+
+class ClinicalExam(models.Model):
+    """Exámenes y estudios: laboratorio clínico, imágenes diagnósticas y otros."""
+
+    appointment = models.ForeignKey("appointments.Appointment", on_delete=models.PROTECT, related_name="exams")
+    category = models.CharField(max_length=16, choices=ExamCategory.choices, default=ExamCategory.LABORATORY.value)
+    name = models.CharField(max_length=200)
+    result = models.TextField(blank=True, default="")
+    reference_range = models.CharField(max_length=200, blank=True, default="")
+    status = models.CharField(max_length=16, choices=ExamStatus.choices, default=ExamStatus.PENDING.value)
+    performed_at = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "appointments_clinicalexam"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.name} — {self.get_status_display()}"

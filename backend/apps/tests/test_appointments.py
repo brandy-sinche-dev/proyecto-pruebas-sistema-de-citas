@@ -65,8 +65,8 @@ class TestAppointmentCreate:
         response = client.post(
             "/api/v1/appointments/",
             {
-                "patientId": setup["patient"].id,
-                "doctorId": setup["doctor"].id,
+                "patientId": setup["patient"].user_id,
+                "doctorId": setup["doctor"].user_id,
                 "specialtyId": setup["doctor"].specialty_id,
                 "date": avail.date.isoformat(),
                 "startTime": "09:00",
@@ -91,8 +91,8 @@ class TestAppointmentCreate:
         response = client.post(
             "/api/v1/appointments/",
             {
-                "patientId": setup["patient"].id,
-                "doctorId": setup["doctor"].id,
+                "patientId": setup["patient"].user_id,
+                "doctorId": setup["doctor"].user_id,
                 "specialtyId": setup["doctor"].specialty_id,
                 "date": avail.date.isoformat(),
                 "startTime": "09:00",
@@ -110,8 +110,8 @@ class TestAppointmentCreate:
         response = client.post(
             "/api/v1/appointments/",
             {
-                "patientId": setup["patient"].id,
-                "doctorId": setup["doctor"].id,
+                "patientId": setup["patient"].user_id,
+                "doctorId": setup["doctor"].user_id,
                 "specialtyId": other_specialty.id,
                 "date": timezone.localdate().isoformat(),
                 "startTime": "09:00",
@@ -122,14 +122,14 @@ class TestAppointmentCreate:
 
     def test_patient_self_booking_forced(self, auth_client, setup):
         patient_user = PatientUserFactory()
-        profile = PatientProfileFactory(user=patient_user)
+        PatientProfileFactory(user=patient_user)
         avail = future_slot(setup["doctor"])
         client = auth_client(patient_user)
         response = client.post(
             "/api/v1/appointments/",
             {
                 "patientId": 99999,
-                "doctorId": setup["doctor"].id,
+                "doctorId": setup["doctor"].user_id,
                 "specialtyId": setup["doctor"].specialty_id,
                 "date": avail.date.isoformat(),
                 "startTime": "10:00",
@@ -137,7 +137,7 @@ class TestAppointmentCreate:
             format="json",
         )
         assert response.status_code == 201
-        assert response.data["patientId"] == profile.id
+        assert response.data["patientId"] == patient_user.id
 
 
 class TestAppointmentTransitions:
@@ -192,6 +192,20 @@ class TestAppointmentTransitions:
         client = auth_client(setup["admin"])
         response = client.post(f"/api/v1/appointments/{cancelled.id}/complete/", format="json")
         assert response.status_code == 400
+
+    def test_patient_cancels_own_appointment(self, auth_client, setup):
+        future = AppointmentFactory(
+            patient=setup["patient"],
+            doctor=setup["doctor"],
+            status="CONFIRMED",
+            date=timezone.localdate() + datetime.timedelta(days=10),
+            start_time=datetime.time(10, 0),
+            end_time=datetime.time(10, 30),
+        )
+        client = auth_client(setup["patient"].user)
+        response = client.post(f"/api/v1/appointments/{future.id}/cancel/", format="json")
+        assert response.status_code == 200
+        assert response.data["status"] == "CANCELLED"
 
     def test_patient_cannot_transition(self, auth_client, setup, pending_appointment):
         client = auth_client(setup["patient"].user)

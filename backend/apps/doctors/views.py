@@ -1,14 +1,13 @@
-from datetime import date
-
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.schedules.models import Availability
 from apps.users.permissions import IsAdminRole, IsStaffRole
 
 from .models import DoctorProfile
 from .serializers import DoctorSerializer, DoctorWriteSerializer
+from .services import full_availability
 
 
 class DoctorViewSet(
@@ -19,7 +18,7 @@ class DoctorViewSet(
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
-    """Médicos. Lectura para staff, escritura restringida a admin."""
+    """Médicos. Lectura para cualquier usuario autenticado, escritura restringida a admin."""
 
     queryset = DoctorProfile.objects.select_related("user", "specialty").prefetch_related("availability").all()
     serializer_class = DoctorSerializer
@@ -31,29 +30,20 @@ class DoctorViewSet(
             return [IsAdminRole()]
         if self.action == "availability":
             return [IsStaffRole()]
-        if self.action in ("list", "retrieve"):
-            return [IsStaffRole()]
-        return []
+        return [IsAuthenticated()]
 
     def get_serializer_class(self):
         if self.action in ("create", "update", "partial_update"):
             return DoctorWriteSerializer
         return DoctorSerializer
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        profile = serializer.save()
+        return Response(DoctorSerializer(profile).data, status=201)
+
     @action(detail=True, methods=["get"])
     def availability(self, request, pk=None):
         doctor = self.get_object()
-        slots = Availability.objects.filter(doctor=doctor, date__gte=date.today()).order_by("date", "start_time")
-        data = [
-            {
-                "id": s.id,
-                "doctorId": s.doctor_id,
-                "date": s.date.isoformat(),
-                "startTime": s.start_time.strftime("%H:%M"),
-                "endTime": s.end_time.strftime("%H:%M"),
-                "status": s.status,
-                "box": s.box,
-            }
-            for s in slots
-        ]
-        return Response(data)
+        return Response(full_availability(doctor))

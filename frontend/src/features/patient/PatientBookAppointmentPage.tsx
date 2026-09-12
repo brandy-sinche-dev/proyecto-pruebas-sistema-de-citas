@@ -1,22 +1,26 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { PageHeader } from '@/components/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { AlertBanner, Spinner } from '@/components/ui/Feedback'
 import { useDoctors, useMutations, useSpecialties, useAvailability } from '@/hooks/queries'
+import { useAuth } from '@/hooks/useAuth'
 import { appointmentSchema, type AppointmentFormValues } from '@/schemas'
 import { formatDateTime } from '@/lib/utils'
 import { z } from 'zod'
 
-const DEMO_PATIENT_ID = 1
 const STEPS = ['Especialidad y médico', 'Fecha y hora', 'Confirmación']
 type AppointmentFormInput = z.input<typeof appointmentSchema>
 
 export function PatientBookAppointmentPage() {
+  const { user } = useAuth()
+  const location = useLocation()
+  const preselectedDoctorId = (location.state as { doctorId?: number } | null)?.doctorId
+  const preselectedSpecialtyId = (location.state as { specialtyId?: number } | null)?.specialtyId
   const [step, setStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const { data: specialties, isLoading: loadingSpecialties } = useSpecialties()
@@ -32,7 +36,12 @@ export function PatientBookAppointmentPage() {
     formState: { errors },
   } = useForm<AppointmentFormInput, unknown, AppointmentFormValues>({
     resolver: zodResolver(appointmentSchema),
-    defaultValues: { specialtyId: undefined, doctorId: undefined, date: '', startTime: '' },
+    defaultValues: {
+      specialtyId: preselectedSpecialtyId ?? undefined,
+      doctorId: preselectedDoctorId ?? undefined,
+      date: '',
+      startTime: '',
+    },
   })
 
   const specialtyId = watch('specialtyId')
@@ -45,6 +54,13 @@ export function PatientBookAppointmentPage() {
   )
   const selectedDoctor = (doctors ?? []).find((d) => d.id === doctorId)
   const selectedSpecialty = (specialties ?? []).find((s) => s.id === specialtyId)
+
+  useEffect(() => {
+    if (!preselectedDoctorId) return
+    if (specialtyId) return
+    const doctor = (doctors ?? []).find((d) => d.id === preselectedDoctorId)
+    if (doctor) setValue('specialtyId', doctor.specialtyId)
+  }, [doctors, preselectedDoctorId, specialtyId, setValue])
 
   const availableTimes = useMemo(() => {
     if (!doctorId || !date) return []
@@ -77,7 +93,7 @@ export function PatientBookAppointmentPage() {
     setError(null)
     createAppointment.mutate(
       {
-        patientId: DEMO_PATIENT_ID,
+        patientId: user?.id ?? 0,
         doctorId: values.doctorId,
         specialtyId: values.specialtyId,
         date: values.date,

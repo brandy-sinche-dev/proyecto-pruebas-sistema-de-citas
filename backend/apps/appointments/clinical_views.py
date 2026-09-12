@@ -1,9 +1,10 @@
 from rest_framework import mixins, viewsets
+from rest_framework.permissions import IsAuthenticated
 
-from apps.users.permissions import IsDoctorRole, IsStaffRole
+from apps.users.permissions import IsDoctorRole
 
-from .clinical_models import ConsultationNote, Prescription
-from .clinical_serializers import ConsultationNoteSerializer, PrescriptionSerializer
+from .clinical_models import ClinicalExam, ConsultationNote, Prescription
+from .clinical_serializers import ClinicalExamSerializer, ConsultationNoteSerializer, PrescriptionSerializer
 
 
 class ConsultationNoteViewSet(
@@ -20,12 +21,16 @@ class ConsultationNoteViewSet(
     def get_permissions(self):
         if self.action == "create":
             return [IsDoctorRole()]
-        return [IsStaffRole()]
+        return [IsAuthenticated()]
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_authenticated and user.role == "doctor":
+        if not user.is_authenticated:
+            return self.queryset.none()
+        if user.role == "doctor":
             return self.queryset.filter(appointment__doctor__user=user)
+        if user.role == "patient":
+            return self.queryset.filter(appointment__patient__user=user)
         return self.queryset
 
 
@@ -45,10 +50,43 @@ class PrescriptionViewSet(
     def get_permissions(self):
         if self.action == "create":
             return [IsDoctorRole()]
-        return [IsStaffRole()]
+        return [IsAuthenticated()]
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_authenticated and user.role == "doctor":
+        if not user.is_authenticated:
+            return self.queryset.none()
+        if user.role == "doctor":
             return self.queryset.filter(appointment__doctor__user=user)
+        if user.role == "patient":
+            return self.queryset.filter(appointment__patient__user=user)
+        return self.queryset
+
+
+class ClinicalExamViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    queryset = ClinicalExam.objects.select_related(
+        "appointment__patient__user", "appointment__doctor"
+    ).all()
+    http_method_names = ["get", "post", "head", "options"]
+    serializer_class = ClinicalExamSerializer
+    pagination_class = None
+
+    def get_permissions(self):
+        if self.action == "create":
+            return [IsDoctorRole()]
+        return [IsAuthenticated()]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return self.queryset.none()
+        if user.role == "doctor":
+            return self.queryset.filter(appointment__doctor__user=user)
+        if user.role == "patient":
+            return self.queryset.filter(appointment__patient__user=user)
         return self.queryset

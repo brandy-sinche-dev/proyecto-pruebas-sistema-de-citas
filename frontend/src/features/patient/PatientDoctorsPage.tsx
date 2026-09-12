@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Avatar } from '@/components/ui/Avatar'
@@ -11,6 +12,10 @@ export function PatientDoctorsPage() {
   const { data: doctors, isLoading, isError, error, refetch } = useDoctors()
   const { data: slots } = useAvailability()
   const [query, setQuery] = useState('')
+  const navigate = useNavigate()
+  const goToBooking = (doctorId: number) => {
+    navigate('/paciente/agendar', { state: { doctorId } })
+  }
 
   const visible = useMemo(() => {
     const q = query.toLowerCase()
@@ -82,7 +87,7 @@ export function PatientDoctorsPage() {
                   'Sin horarios publicados próximamente.'
                 )}
               </p>
-              <Button variant={d.available ? 'health' : 'secondary'} disabled={!d.available} className="mt-4 w-full">
+              <Button variant={d.available ? 'health' : 'secondary'} disabled={!d.available} className="mt-4 w-full" onClick={() => goToBooking(d.id)}>
                 <span className="material-symbols-outlined text-base">calendar_add_on</span>
                 Reservar cita
               </Button>

@@ -1,8 +1,7 @@
 from rest_framework import serializers
 
-from apps.users.choices import Role
-
 from .models import PatientProfile
+from .services import create_patient, email_taken
 
 
 class PatientSerializer(serializers.ModelSerializer):
@@ -15,6 +14,9 @@ class PatientSerializer(serializers.ModelSerializer):
     birthDate = serializers.DateField(source="birth_date", allow_null=True, required=False)
     gender = serializers.CharField(max_length=1, allow_blank=True)
     bloodType = serializers.CharField(source="blood_type", allow_blank=True)
+    insuranceId = serializers.IntegerField(source="insurance_id", allow_null=True, read_only=True)
+    insuranceName = serializers.CharField(source="insurance.name", read_only=True, default=None)
+    policyNumber = serializers.CharField(source="policy_number", allow_blank=True, required=False)
 
     class Meta:
         model = PatientProfile
@@ -28,6 +30,9 @@ class PatientSerializer(serializers.ModelSerializer):
             "birthDate",
             "gender",
             "bloodType",
+            "insuranceId",
+            "insuranceName",
+            "policyNumber",
         ]
 
 
@@ -40,33 +45,38 @@ class PatientCreateSerializer(serializers.Serializer):
     birthDate = serializers.DateField(required=False, allow_null=True)
     gender = serializers.ChoiceField(choices=["M", "F"], required=False)
     bloodType = serializers.CharField(max_length=8, required=False, default="")
+    insuranceId = serializers.IntegerField(required=False, allow_null=True)
+    policyNumber = serializers.CharField(max_length=64, required=False, default="")
 
     def validate_email(self, value: str) -> str:
-        from apps.users.models import User
-
-        if User.objects.filter(email__iexact=value).exists():
+        if email_taken(value):
             raise serializers.ValidationError("Ya existe un usuario con este correo.")
         return value.lower()
 
-    def create(self, validated):
-        from apps.users.models import User
+    def validate_documentNumber(self, value: str) -> str:
+        if value and PatientProfile.objects.filter(document_number__iexact=value).exists():
+            raise serializers.ValidationError("Ya existe un paciente con este DNI.")
+        return value
 
-        user = User(
-            username=validated.pop("documentNumber") or validated["email"].split("@")[0],
-            email=validated["email"],
+    def validate_insuranceId(self, value):
+        if value is None:
+            return value
+        from apps.finances.models import Insurance
+
+        if not Insurance.objects.filter(pk=value, active=True).exists():
+            raise serializers.ValidationError("No existe una aseguradora activa con ese identificador.")
+        return value
+
+    def create(self, validated):
+        return create_patient(
             first_name=validated["firstName"],
             last_name=validated["lastName"],
+            email=validated["email"],
             phone=validated.get("phone", ""),
-            role=Role.PATIENT.value,
-            is_active=True,
-        )
-        user.set_password("ClinicaAngry1")  # contraseña inicial documentada en el seed
-        user.save()
-        profile = PatientProfile.objects.create(
-            user=user,
             document_number=validated.get("documentNumber", ""),
             birth_date=validated.get("birthDate"),
             gender=validated.get("gender", ""),
             blood_type=validated.get("bloodType", ""),
+            insurance_id=validated.get("insuranceId"),
+            policy_number=validated.get("policyNumber", ""),
         )
-        return profile

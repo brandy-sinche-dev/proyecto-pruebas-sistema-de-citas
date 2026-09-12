@@ -40,6 +40,17 @@ class IsStaffRole(BasePermission):
         )
 
 
+class IsAdminOrDoctor(BasePermission):
+    """Admin (todo) o médico (solo sobre su propio ámbito, vía get_queryset/perform_create)."""
+
+    def has_permission(self, request, view):
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and request.user.role in (Role.ADMIN.value, Role.DOCTOR.value)
+        )
+
+
 class IsOwnObject(BasePermission):
     """El usuario solo puede operar sobre recursos que le pertenecen."""
 

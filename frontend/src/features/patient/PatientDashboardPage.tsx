@@ -6,13 +6,11 @@ import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Feedback'
 import { useAppointments, useSpecialties } from '@/hooks/queries'
 
-const DEMO_PATIENT_ID = 1
-
 export function PatientDashboardPage() {
   const { data: appointments, isLoading } = useAppointments()
   const { data: specialties } = useSpecialties()
 
-  const mine = (appointments ?? []).filter((a) => a.patientId === DEMO_PATIENT_ID)
+  const mine = appointments ?? []
   const next = mine.find((a) => a.status === 'CONFIRMED' || a.status === 'PENDING')
 
   return (
@@ -92,7 +90,7 @@ export function PatientDashboardPage() {
         <h2 className="mb-3 font-display text-lg font-semibold text-primary">Especialidades en la clínica</h2>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
           {(specialties ?? []).map((s) => (
-            <Link key={s.id} to="/paciente/agendar" className="card flex flex-col items-center gap-2 p-4 text-center transition-shadow hover:shadow-tier2">
+            <Link key={s.id} to="/paciente/agendar" state={{ specialtyId: s.id }} className="card flex flex-col items-center gap-2 p-4 text-center transition-shadow hover:shadow-tier2">
               <span className="material-symbols-outlined rounded-lg p-2 text-2xl text-on-primary" style={{ backgroundColor: s.color ?? '#0F2942' }}>
                 {s.icon ?? 'emergency'}
               </span>

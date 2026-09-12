@@ -1,19 +1,15 @@
-import datetime as dt
-from datetime import timedelta
-
-from django.conf import settings
 from rest_framework import serializers
 
 from apps.users.choices import AppointmentStatus
 
 from .models import Appointment
-from .services import AppointmentValidationError, validate_schedule
+from .services import AppointmentValidationError, SpecialtyMismatchError, create_appointment
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
-    patientId = serializers.IntegerField(source="patient_id")
+    patientId = serializers.IntegerField(source="patient.user_id")
     patientName = serializers.CharField(source="patient.user.full_name", read_only=True)
-    doctorId = serializers.IntegerField(source="doctor_id")
+    doctorId = serializers.IntegerField(source="doctor.user_id")
     doctorName = serializers.CharField(source="doctor.user.full_name", read_only=True)
     specialtyId = serializers.IntegerField(source="specialty_id")
     specialtyName = serializers.CharField(source="specialty.name", read_only=True)
@@ -22,6 +18,8 @@ class AppointmentSerializer(serializers.ModelSerializer):
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
     reason = serializers.CharField(allow_blank=True, required=False)
     notes = serializers.CharField(allow_blank=True, required=False)
+    teleconsult = serializers.BooleanField(required=False)
+    teleconsultLink = serializers.CharField(source="teleconsult_link", read_only=True)
 
     class Meta:
         model = Appointment
@@ -41,6 +39,8 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "box",
             "reason",
             "notes",
+            "teleconsult",
+            "teleconsultLink",
             "createdAt",
         ]
 
@@ -52,37 +52,23 @@ class AppointmentCreateSerializer(serializers.Serializer):
     date = serializers.DateField()
     startTime = serializers.TimeField()
     reason = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    teleconsult = serializers.BooleanField(required=False, default=False)
 
     def create(self, validated):
-        from apps.doctors.models import DoctorProfile
-        from apps.patients.models import PatientProfile
-        from apps.specialties.models import Specialty
-
-        patient = PatientProfile.objects.select_related("user").get(pk=validated["patientId"])
-        doctor = DoctorProfile.objects.select_related("user", "specialty").get(pk=validated["doctorId"])
-        specialty = Specialty.objects.get(pk=validated["specialtyId"])
-        if doctor.specialty_id != specialty.id:
-            raise serializers.ValidationError({"specialtyId": "La especialidad no corresponde al médico."})
-
-        duration = timedelta(minutes=getattr(settings, "CONSULTATION_DURATION_MINUTES", 30))
-        start = validated["startTime"]
-        end = (dt.datetime.combine(validated["date"], start) + duration).time()
-
         try:
-            validate_schedule(validated["date"], start, end, patient=patient, doctor=doctor)
+            return create_appointment(
+                patient_id=validated["patientId"],
+                doctor_id=validated["doctorId"],
+                specialty_id=validated["specialtyId"],
+                date_=validated["date"],
+                start_time=validated["startTime"],
+                reason=validated.get("reason", ""),
+                teleconsult=validated.get("teleconsult", False),
+            )
+        except SpecialtyMismatchError as exc:
+            raise serializers.ValidationError({"specialtyId": str(exc)}) from exc
         except AppointmentValidationError as exc:
             raise serializers.ValidationError({"detail": str(exc)}) from exc
-
-        return Appointment.objects.create(
-            patient=patient,
-            doctor=doctor,
-            specialty=specialty,
-            date=validated["date"],
-            start_time=start,
-            end_time=end,
-            reason=validated.get("reason", ""),
-            box=doctor.box,
-        )
 
 
 class AppointmentStatusSerializer(serializers.Serializer):

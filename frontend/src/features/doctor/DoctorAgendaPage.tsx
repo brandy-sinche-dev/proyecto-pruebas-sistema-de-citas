@@ -3,16 +3,17 @@ import { PageHeader } from '@/components/PageHeader'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 import { StatusBadge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ErrorState, Spinner } from '@/components/ui/Feedback'
 import { useAppointments, useMutations } from '@/hooks/queries'
-
-const DEMO_DOCTOR_ID = 1
+import { transitionCopy, useTransitionConfirm } from '@/hooks/useTransitionConfirm'
 
 const HOURS = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00']
 
 export function DoctorAgendaPage() {
   const { data: appointments, isLoading, isError, error, refetch } = useAppointments()
   const { updateStatus } = useMutations()
+  const { pending, error: transitionError, ask, close, confirm } = useTransitionConfirm(updateStatus)
   const [dayOffset, setDayOffset] = useState(0)
 
   const today = new Date()
@@ -20,11 +21,13 @@ export function DoctorAgendaPage() {
   const dateKey = today.toISOString().split('T')[0]
 
   const dayAppointments = (appointments ?? [])
-    .filter((a) => a.doctorId === DEMO_DOCTOR_ID && a.date === dateKey)
+    .filter((a) => a.date === dateKey)
     .sort((a, b) => a.startTime.localeCompare(b.startTime))
 
   const appointmentForHour = (hour: string) =>
     dayAppointments.find((a) => a.startTime.split(':')[0] === hour.split(':')[0])
+
+  const copy = transitionCopy(pending)
 
   return (
     <>
@@ -71,16 +74,16 @@ export function DoctorAgendaPage() {
                 <StatusBadge status={appointment.status} />
                 {appointment.status === 'PENDING' && (
                   <>
-                    <Button size="sm" variant="health" onClick={() => updateStatus.mutate({ id: appointment.id, status: 'CONFIRMED' })}>Confirmar</Button>
-                    <Button size="sm" variant="destructive" onClick={() => updateStatus.mutate({ id: appointment.id, status: 'CANCELLED' })}>Rechazar</Button>
+                    <Button size="sm" variant="health" onClick={() => ask({ id: appointment.id, status: 'CONFIRMED' }, appointment)}>Confirmar</Button>
+                    <Button size="sm" variant="destructive" onClick={() => ask({ id: appointment.id, status: 'CANCELLED' }, appointment)}>Rechazar</Button>
                   </>
                 )}
                 {appointment.status === 'CONFIRMED' && (
                   <>
-                    <Button size="sm" variant="health" onClick={() => updateStatus.mutate({ id: appointment.id, status: 'COMPLETED' })}>
+                    <Button size="sm" variant="health" onClick={() => ask({ id: appointment.id, status: 'COMPLETED' }, appointment)}>
                       Iniciar consulta
                     </Button>
-                    <Button size="sm" variant="secondary" onClick={() => updateStatus.mutate({ id: appointment.id, status: 'NO_SHOW' })}>
+                    <Button size="sm" variant="secondary" onClick={() => ask({ id: appointment.id, status: 'NO_SHOW' }, appointment)}>
                       No asistió
                     </Button>
                   </>
@@ -108,6 +111,18 @@ export function DoctorAgendaPage() {
           )}
         </CardBody>
       </Card>
+
+      <ConfirmDialog
+        open={Boolean(pending)}
+        title={copy?.title ?? ''}
+        message={copy?.message ?? ''}
+        confirmLabel={copy?.label ?? 'Confirmar'}
+        variant={copy?.variant ?? 'primary'}
+        loading={updateStatus.isPending}
+        error={transitionError}
+        onConfirm={confirm}
+        onCancel={close}
+      />
     </>
   )
 }

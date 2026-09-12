@@ -1,13 +1,18 @@
 """Serializers de autenticación: registro, login con tokens + usuario y refresh."""
 
-import re
-
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from apps.users.choices import Role
 from apps.users.serializers import UserSerializer
+
+from .services import (
+    PasswordValidationError,
+    create_patient_user,
+    email_taken,
+    username_taken,
+    validate_password_strength,
+)
 
 User = get_user_model()
 
@@ -20,35 +25,31 @@ class RegisterSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, min_length=6)
 
     def validate_email(self, value: str) -> str:
-        if User.objects.filter(email__iexact=value).exists():
+        if email_taken(value):
             raise serializers.ValidationError("Ya existe una cuenta con este correo.")
         return value.lower()
 
     def validate_username(self, value: str) -> str:
-        if User.objects.filter(username__iexact=value).exists():
+        if username_taken(value):
             raise serializers.ValidationError("Este usuario ya está registrado.")
         return value
 
     def validate_password(self, value: str) -> str:
-        if not re.search(r"[A-Z]", value):
-            raise serializers.ValidationError("Debe incluir una letra mayúscula.")
-        if not re.search(r"[0-9]", value):
-            raise serializers.ValidationError("Debe incluir un número.")
+        try:
+            validate_password_strength(value)
+        except PasswordValidationError as exc:
+            raise serializers.ValidationError(str(exc)) from exc
         return value
 
     def create(self, validated):
         password = validated.pop("password")
-        user = User(
+        return create_patient_user(
             username=validated["username"],
             email=validated["email"],
             first_name=validated["firstName"],
             last_name=validated["lastName"],
-            role=Role.PATIENT.value,
-            is_active=True,
+            password=password,
         )
-        user.set_password(password)
-        user.save()
-        return user
 
 
 class LoginSerializer(TokenObtainPairSerializer):

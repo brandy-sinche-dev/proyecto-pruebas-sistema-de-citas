@@ -11,8 +11,6 @@ import { useAppointments, useMutations } from '@/hooks/queries'
 import { formatDateTime } from '@/lib/utils'
 import type { Appointment } from '@/types'
 
-const DEMO_PATIENT_ID = 1
-
 export function PatientAppointmentsPage() {
   const { data: appointments, isLoading, isError, error, refetch } = useAppointments()
   const { updateStatus } = useMutations()
@@ -20,7 +18,6 @@ export function PatientAppointmentsPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const mine = (appointments ?? [])
-    .filter((a) => a.patientId === DEMO_PATIENT_ID)
     .sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime))
 
   const canCancel = (a: Appointment) => a.status === 'PENDING' || a.status === 'CONFIRMED'

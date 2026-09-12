@@ -6,6 +6,7 @@ class Specialty(models.Model):
     description = models.TextField(blank=True, default="")
     color = models.CharField(max_length=16, blank=True, default="")
     icon = models.CharField(max_length=64, blank=True, default="")
+    fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     class Meta:
         db_table = "specialties_specialty"

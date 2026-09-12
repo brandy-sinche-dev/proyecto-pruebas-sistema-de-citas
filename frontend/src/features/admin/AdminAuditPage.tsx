@@ -4,23 +4,60 @@ import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
-import { Spinner } from '@/components/ui/Feedback'
-import { useAuth } from '@/hooks/useAuth'
+import { Select } from '@/components/ui/Input'
+import { ErrorState, Spinner } from '@/components/ui/Feedback'
+import { useAudit } from '@/hooks/queries'
 import type { AuditLog } from '@/types'
 
-const mockLogs: AuditLog[] = [
-  { id: 1, userId: 1, userName: 'Claudia Director', action: 'APPROVE_APPOINTMENT', module: 'appointments', timestamp: '2025-06-01T09:12:00', metadata: { appointmentId: 9 } },
-  { id: 2, userId: 3, userName: 'Elena Ramos', action: 'CREATE_PRESCRIPTION', module: 'prescriptions', timestamp: '2025-06-01T09:20:00', metadata: { patientId: 1 } },
-  { id: 3, userId: 2, userName: 'Sandra Paredes', action: 'CHECK_IN_PATIENT', module: 'reception', timestamp: '2025-06-01T09:31:00', metadata: { patientId: 1 } },
-  { id: 4, userId: 1, userName: 'Claudia Director', action: 'UPDATE_DOCTOR', module: 'doctors', timestamp: '2025-06-01T09:45:00', metadata: { doctorId: 4 } },
-  { id: 5, userId: 1, userName: 'Claudia Director', action: 'CREATE_SPECIALTY', module: 'specialties', timestamp: '2025-06-01T10:02:00', metadata: { name: 'Oftalmología' } },
+const MODULES = [
+  { value: '', label: 'Todos los módulos' },
+  { value: 'auth', label: 'Autenticación' },
+  { value: 'patients', label: 'Pacientes' },
+  { value: 'doctors', label: 'Médicos' },
+  { value: 'specialties', label: 'Especialidades' },
+  { value: 'appointments', label: 'Citas' },
+  { value: 'schedules', label: 'Horarios' },
+  { value: 'prescriptions', label: 'Recetas' },
+  { value: 'reception', label: 'Recepción' },
 ]
 
-export function AdminAuditPage() {
-  const [logs] = useState<AuditLog[]>(mockLogs)
-  const { user } = useAuth()
+const statusBadge = (code?: number) => {
+  if (!code) return null
+  const ok = code < 400
+  return (
+    <Badge className={ok ? 'border-success-200 bg-success-50 text-success-700' : 'border-danger-200 bg-danger-50 text-danger-700'}>
+      {code}
+    </Badge>
+  )
+}
 
-  const moduleLabel = (module: string): string => module.toUpperCase()
+export function AdminAuditPage() {
+  const [module, setModule] = useState('')
+  const { data: logs, isLoading, isError, error, refetch } = useAudit(module || undefined)
+
+  const moduleLabel = (m: string): string => m.toUpperCase()
+
+  const exportCsv = () => {
+    const rows = (logs ?? []).map((l) =>
+      [
+        l.id,
+        new Date(l.timestamp).toLocaleString('es-ES'),
+        l.userName,
+        l.action,
+        l.module,
+        l.method ?? '',
+        l.path ?? '',
+        l.statusCode ?? '',
+      ].join(';'),
+    )
+    const blob = new Blob([['ID;Fecha;Usuario;Accion;Modulo;Metodo;Ruta;Status', ...rows].join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `auditoria-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   const columns: Array<Column<AuditLog>> = [
     {
@@ -38,6 +75,8 @@ export function AdminAuditPage() {
     },
     { key: 'action', header: 'Acción', render: (row) => <span className="tabular font-medium text-on-surface">{row.action}</span> },
     { key: 'module', header: 'Módulo', render: (row) => <Badge>{moduleLabel(row.module)}</Badge> },
+    { key: 'request', header: 'Request', render: (row) => <span className="tabular text-xs text-on-surface-variant">{row.method} {row.path}</span> },
+    { key: 'status', header: 'Status', render: (row) => statusBadge(row.statusCode) },
     {
       key: 'timestamp',
       header: 'Fecha',
@@ -56,7 +95,7 @@ export function AdminAuditPage() {
         actions={
           <button
             type="button"
-            onClick={(e) => e.preventDefault()}
+            onClick={exportCsv}
             className="btn-secondary"
           >
             <span className="material-symbols-outlined text-base">download</span>
@@ -65,12 +104,21 @@ export function AdminAuditPage() {
         }
       />
 
-      {!user ? <Spinner /> : null}
+      <div className="mb-4 flex max-w-xs items-end gap-3">
+        <Select label="Filtrar por módulo" value={module} onChange={(e) => setModule(e.target.value)}>
+          {MODULES.map((m) => (
+            <option key={m.value} value={m.value}>{m.label}</option>
+          ))}
+        </Select>
+      </div>
+
+      {isLoading && <Spinner />}
+      {isError && <ErrorState message={(error as Error).message} onRetry={refetch} />}
 
       <Card>
         <CardHeader title="Últimas acciones registradas" subtitle="Inmutables e inmediatas: todo cambio queda trazado para auditoría básica" />
         <CardBody className="p-0">
-          <DataTable columns={columns} rows={logs} empty="No hay eventos de auditoría" />
+          <DataTable columns={columns} rows={logs ?? []} empty={module ? 'No hay eventos en este módulo' : 'No hay eventos de auditoría'} />
         </CardBody>
       </Card>
     </>

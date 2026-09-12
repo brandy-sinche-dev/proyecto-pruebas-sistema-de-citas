@@ -7,11 +7,11 @@ import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { Input } from '@/components/ui/Input'
+import { Input, Select } from '@/components/ui/Input'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
-import { ErrorState, Spinner } from '@/components/ui/Feedback'
-import { usePatients, useSpecialties } from '@/hooks/queries'
+import { AlertBanner, ErrorState, Spinner } from '@/components/ui/Feedback'
+import { useMutations, usePatients } from '@/hooks/queries'
 import type { Patient } from '@/types'
 
 const patientFormSchema = z.object({
@@ -20,15 +20,19 @@ const patientFormSchema = z.object({
   email: z.string().email('Correo no válido'),
   documentNumber: z.string().min(8, 'DNI inválido'),
   phone: z.string().optional(),
+  gender: z.enum(['M', 'F']).optional(),
+  birthDate: z.string().optional(),
+  bloodType: z.string().optional(),
 })
 
 type PatientFormValues = z.infer<typeof patientFormSchema>
 
 export function AdminPatientsPage() {
   const { data: patients, isLoading, isError, error, refetch } = usePatients()
-  const { data: specialties } = useSpecialties()
+  const { createPatient } = useMutations()
   const [query, setQuery] = useState('')
   const [showModal, setShowModal] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const {
     register,
     handleSubmit,
@@ -60,6 +64,25 @@ export function AdminPatientsPage() {
     { key: 'blood', header: 'Grupo', render: (row) => <Badge>{row.bloodType ?? '—'}</Badge> },
     { key: 'gender', header: 'Sexo', render: (row) => <span>{row.gender}</span> },
   ]
+
+  function onSubmit(values: PatientFormValues) {
+    setErrorMsg(null)
+    createPatient.mutate(
+      {
+        ...values,
+        birthDate: values.birthDate || undefined,
+        gender: values.gender,
+        bloodType: values.bloodType || undefined,
+      },
+      {
+        onSuccess: () => {
+          setShowModal(false)
+          reset()
+        },
+        onError: (err) => setErrorMsg(err.message),
+      },
+    )
+  }
 
   return (
     <>
@@ -99,14 +122,8 @@ export function AdminPatientsPage() {
       </Card>
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title="Registrar paciente">
-        <form
-          onSubmit={handleSubmit(() => {
-            setShowModal(false)
-            reset()
-          })}
-          className="flex flex-col gap-4"
-          noValidate
-        >
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+          {errorMsg && <AlertBanner variant="error">{errorMsg}</AlertBanner>}
           <div className="grid gap-4 sm:grid-cols-2">
             <Input label="Nombres" placeholder="María" error={errors.firstName?.message} {...register('firstName')} />
             <Input label="Apellidos" placeholder="Gómez" error={errors.lastName?.message} {...register('lastName')} />
@@ -116,12 +133,20 @@ export function AdminPatientsPage() {
             <Input label="DNI" placeholder="12345678" error={errors.documentNumber?.message} {...register('documentNumber')} />
             <Input label="Teléfono" placeholder="+51 999 999 999" error={errors.phone?.message} {...register('phone')} />
           </div>
-          <p className="text-xs text-on-surface-variant">
-            Especialidades disponibles: {specialties?.map((s) => s.name).join(', ')}
-          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input label="Fecha de nacimiento" type="date" error={errors.birthDate?.message} {...register('birthDate')} />
+            <Select label="Sexo" error={errors.gender?.message} {...register('gender')}>
+              <option value="">Selecciona…</option>
+              <option value="F">Femenino</option>
+              <option value="M">Masculino</option>
+            </Select>
+          </div>
+          <Input label="Grupo sanguíneo" placeholder="O+ (opcional)" error={errors.bloodType?.message} {...register('bloodType')} />
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setShowModal(false)}>Cancelar</Button>
-            <Button type="submit">Guardar paciente</Button>
+            <Button type="submit" disabled={createPatient.isPending}>
+              {createPatient.isPending ? 'Guardando…' : 'Guardar paciente'}
+            </Button>
           </div>
         </form>
       </Modal>

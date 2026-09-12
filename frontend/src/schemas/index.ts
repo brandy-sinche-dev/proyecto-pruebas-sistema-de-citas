@@ -47,10 +47,12 @@ export const appointmentSchema = z
 export type AppointmentFormValues = z.infer<typeof appointmentSchema>
 
 export const availabilitySchema = z.object({
-  doctorId: z.coerce.number().int().positive('Selecciona un médico'),
   date: z.string().min(1, 'Selecciona una fecha'),
   startTime: z.string().min(1, 'Selecciona la hora de inicio'),
   endTime: z.string().min(1, 'Selecciona la hora de fin'),
+}).refine((data) => data.endTime > data.startTime, {
+  message: 'La hora de fin debe ser posterior a la de inicio',
+  path: ['endTime'],
 })
 
 export type AvailabilityFormValues = z.infer<typeof availabilitySchema>

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from .models import User
+from .services import update_profile
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -32,3 +33,6 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         model = User
         fields = ["firstName", "lastName", "email", "phone"]
         extra_kwargs = {"email": {"required": False}}
+
+    def update(self, instance, validated_data):
+        return update_profile(instance, validated_data)

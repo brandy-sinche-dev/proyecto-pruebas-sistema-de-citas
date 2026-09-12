@@ -1,19 +1,19 @@
 """Endpoints de autenticación, healthcheck y registro."""
 
-from django.db import connection, transaction
+from django.db import transaction
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from apps.patients.models import PatientProfile
+from apps.patients.services import create_patient_profile
 from apps.users.serializers import UserSerializer
 
 from .serializers import LoginResponseSerializer, LoginSerializer, RegisterSerializer
+from .services import blacklist_refresh_token, database_is_healthy
 
 
 class RegisterView(APIView):
@@ -25,7 +25,7 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        PatientProfile.objects.create(user=user)
+        create_patient_profile(user)
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
@@ -51,20 +51,8 @@ class LoginView(APIView):
 class LogoutView(APIView):
     """Invalida un refresh token del lado del cliente (lista negra simple en BD)."""
 
-    @transaction.atomic
     def post(self, request):
-        from .models import BlacklistedToken
-
-        refresh = request.data.get("refresh")
-        if refresh:
-            try:
-                token = RefreshToken(refresh)
-                BlacklistedToken.objects.create(
-                    token=str(token),
-                    expires_at=timezone.now() + timezone.timedelta(days=7),
-                )
-            except Exception:
-                pass
+        blacklist_refresh_token(request.data.get("refresh"))
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -77,13 +65,7 @@ class HealthView(APIView):
 
     @extend_schema(responses={200: dict})
     def get(self, request):
-        db_ok = True
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT 1")
-                cursor.fetchone()
-        except Exception:
-            db_ok = False
+        db_ok = database_is_healthy()
         return Response(
             {
                 "status": "ok" if db_ok else "degraded",

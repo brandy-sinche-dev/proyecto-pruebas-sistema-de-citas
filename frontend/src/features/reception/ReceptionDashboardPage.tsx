@@ -6,14 +6,17 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Avatar } from '@/components/ui/Avatar'
 import { StatusBadge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ErrorState, Spinner } from '@/components/ui/Feedback'
 import { useAppointments, useMutations } from '@/hooks/queries'
+import { transitionCopy, useTransitionConfirm } from '@/hooks/useTransitionConfirm'
 import { formatDateTime } from '@/lib/utils'
 import type { Appointment } from '@/types'
 
 export function ReceptionDashboardPage() {
   const { data: appointments, isLoading, isError, error, refetch } = useAppointments()
   const { updateStatus } = useMutations()
+  const { pending: pendingTransition, error: transitionError, ask, close, confirm } = useTransitionConfirm(updateStatus)
   const [query, setQuery] = useState('')
 
   const today = new Date().toISOString().split('T')[0]
@@ -21,13 +24,15 @@ export function ReceptionDashboardPage() {
     .filter((a) => a.date === today)
     .sort((a, b) => a.startTime.localeCompare(b.startTime))
 
-  const checkedIn = todayAppointments.filter((a) => a.status === 'CONFIRMED').length
+  const checkedIn = todayAppointments.filter((a) => a.status === 'CHECKED_IN').length
   const pending = todayAppointments.filter((a) => a.status === 'PENDING').length
 
   const visible = todayAppointments.filter((a) => {
     const q = query.toLowerCase()
     return !q || `${a.patientName} ${a.doctorName} ${a.code}`.toLowerCase().includes(q)
   })
+
+  const copy = transitionCopy(pendingTransition)
 
   const columns: Array<Column<Appointment>> = [
     {
@@ -62,12 +67,17 @@ export function ReceptionDashboardPage() {
       render: (row) => (
         <div className="flex gap-1">
           {row.status === 'PENDING' && (
-            <Button size="sm" variant="health" onClick={() => updateStatus.mutate({ id: row.id, status: 'CONFIRMED' })}>
-              Registrar llegada
+            <Button size="sm" variant="secondary" onClick={() => ask({ id: row.id, status: 'CONFIRMED' }, row)}>
+              Confirmar
             </Button>
           )}
           {row.status === 'CONFIRMED' && (
-            <Button size="sm" variant="secondary" onClick={() => updateStatus.mutate({ id: row.id, status: 'COMPLETED' })}>
+            <Button size="sm" variant="health" onClick={() => ask({ id: row.id, status: 'CHECKED_IN' }, row)}>
+              Registrar check-in
+            </Button>
+          )}
+          {row.status === 'CHECKED_IN' && (
+            <Button size="sm" variant="secondary" onClick={() => ask({ id: row.id, status: 'COMPLETED' }, row)}>
               Marcar atendido
             </Button>
           )}
@@ -134,6 +144,18 @@ export function ReceptionDashboardPage() {
           <DataTable columns={columns} rows={visible} empty="No hay citas programadas para hoy" />
         </CardBody>
       </Card>
+
+      <ConfirmDialog
+        open={Boolean(pendingTransition)}
+        title={copy?.title ?? ''}
+        message={copy?.message ?? ''}
+        confirmLabel={copy?.label ?? 'Confirmar'}
+        variant={copy?.variant ?? 'primary'}
+        loading={updateStatus.isPending}
+        error={transitionError}
+        onConfirm={confirm}
+        onCancel={close}
+      />
     </>
   )
 }

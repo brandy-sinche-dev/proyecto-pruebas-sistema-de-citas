@@ -1,17 +1,48 @@
 import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { PageHeader } from '@/components/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { ErrorState, Spinner } from '@/components/ui/Feedback'
-import { useDoctors, useSpecialties } from '@/hooks/queries'
+import { AlertBanner, ErrorState, Spinner } from '@/components/ui/Feedback'
+import { useDoctors, useMutations, useSpecialties } from '@/hooks/queries'
+
+const specialtyFormSchema = z.object({
+  name: z.string().min(2, 'El nombre es obligatorio'),
+  description: z.string().optional(),
+})
+
+type SpecialtyFormValues = z.infer<typeof specialtyFormSchema>
 
 export function AdminSpecialtiesPage() {
   const { data: specialties, isLoading, isError, error, refetch } = useSpecialties()
   const { data: doctors } = useDoctors()
+  const { createSpecialty } = useMutations()
   const [showModal, setShowModal] = useState(false)
-  const [name, setName] = useState('')
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<SpecialtyFormValues>({ resolver: zodResolver(specialtyFormSchema) })
+
+  function onSubmit(values: SpecialtyFormValues) {
+    setErrorMsg(null)
+    createSpecialty.mutate(
+      { name: values.name, description: values.description ?? '' },
+      {
+        onSuccess: () => {
+          setShowModal(false)
+          reset()
+        },
+        onError: (err) => setErrorMsg(err.message),
+      },
+    )
+  }
 
   return (
     <>
@@ -50,18 +81,15 @@ export function AdminSpecialtiesPage() {
       </section>
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title="Nueva especialidad">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            setShowModal(false)
-            setName('')
-          }}
-          className="flex flex-col gap-4"
-        >
-          <Input label="Nombre de la especialidad" placeholder="Oftalmología" value={name} onChange={(e) => setName(e.target.value)} required />
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+          {errorMsg && <AlertBanner variant="error">{errorMsg}</AlertBanner>}
+          <Input label="Nombre de la especialidad" placeholder="Oftalmología" error={errors.name?.message} {...register('name')} />
+          <Input label="Descripción (opcional)" placeholder="Atención de la salud ocular" error={errors.description?.message} {...register('description')} />
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setShowModal(false)}>Cancelar</Button>
-            <Button type="submit">Guardar</Button>
+            <Button type="submit" disabled={createSpecialty.isPending}>
+              {createSpecialty.isPending ? 'Guardando…' : 'Guardar'}
+            </Button>
           </div>
         </form>
       </Modal>

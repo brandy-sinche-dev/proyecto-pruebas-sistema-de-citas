@@ -22,6 +22,8 @@ class Appointment(models.Model):
     box = models.CharField(max_length=16, blank=True, default="")
     reason = models.CharField(max_length=500, blank=True, default="")
     notes = models.TextField(blank=True, default="")
+    teleconsult = models.BooleanField(default=False)
+    teleconsult_link = models.CharField(max_length=32, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -39,27 +41,18 @@ class Appointment(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.code:
-            self.code = self._next_code()
+            from .services import next_appointment_code
+
+            self.code = next_appointment_code(self.date)
         if not self.end_time:
             duration = timedelta(minutes=getattr(settings, "CONSULTATION_DURATION_MINUTES", 30))
             self.end_time = (datetime.combine(self.date, self.start_time) + duration).time()
         super().save(*args, **kwargs)
 
-    def _next_code(self) -> str:
-        from django.db.models import Max
-
-        last = Appointment.objects.aggregate(max_code=Max("code"))["max_code"]
-        seq = 1
-        if last and last.startswith("CIT-"):
-            try:
-                seq = int(last.split("-")[-1]) + 1
-            except ValueError:
-                seq = 1
-        return f"CIT-{self.date.year}-{seq:04d}"
-
 
 # Registrar modelos clínicos vinculados a Appointment en el registry de Django.
 from .clinical_models import (  # noqa: E402, F401
+    ClinicalExam,
     ConsultationNote,
     Medication,
     Prescription,

@@ -5,14 +5,12 @@ import { ErrorState, Spinner } from '@/components/ui/Feedback'
 import { useConsultationNotes, usePrescriptions } from '@/hooks/queries'
 import { formatDateTime } from '@/lib/utils'
 
-const DEMO_PATIENT_ID = 1
-
 export function PatientHistoryPage() {
   const { data: notes, isLoading: loadingNotes, isError, error, refetch } = useConsultationNotes()
   const { data: prescriptions, isLoading: loadingRx } = usePrescriptions()
 
-  const mineNotes = (notes ?? []).filter((n) => n.patientId === DEMO_PATIENT_ID)
-  const mineRx = (prescriptions ?? []).filter((p) => p.patientId === DEMO_PATIENT_ID)
+  const mineNotes = notes ?? []
+  const mineRx = prescriptions ?? []
 
   return (
     <>

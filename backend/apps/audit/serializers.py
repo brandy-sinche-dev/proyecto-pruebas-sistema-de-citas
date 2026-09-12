@@ -6,6 +6,7 @@ from .models import AuditLog
 class AuditLogSerializer(serializers.ModelSerializer):
     userId = serializers.IntegerField(source="user_id", read_only=True)
     userName = serializers.CharField(source="user_name", read_only=True)
+    statusCode = serializers.IntegerField(source="status_code", read_only=True)
     timestamp = serializers.DateTimeField(source="created_at", read_only=True)
 
     class Meta:
@@ -18,7 +19,7 @@ class AuditLogSerializer(serializers.ModelSerializer):
             "module",
             "method",
             "path",
-            "status_code",
+            "statusCode",
             "metadata",
             "timestamp",
         ]

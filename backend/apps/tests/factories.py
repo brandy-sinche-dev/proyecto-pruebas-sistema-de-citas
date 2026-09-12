@@ -5,8 +5,10 @@ import datetime
 import factory
 from django.contrib.auth import get_user_model
 
-from apps.appointments.models import Appointment, ConsultationNote, Medication, Prescription
+from apps.appointments.models import Appointment, ClinicalExam, ConsultationNote, Medication, Prescription
+from apps.boxes.models import Box
 from apps.doctors.models import DoctorProfile
+from apps.finances.models import Insurance
 from apps.notifications.models import Notification
 from apps.patients.models import PatientProfile
 from apps.schedules.models import Availability
@@ -66,6 +68,18 @@ class SpecialtyFactory(factory.django.DjangoModelFactory):
     name = factory.Sequence(lambda n: f"Especialidad {n}")
     color = "#0D9488"
     icon = "medical_services"
+    fee = factory.LazyFunction(lambda: 150.00)
+
+
+class InsuranceFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Insurance
+        django_get_or_create = ("code",)
+
+    code = factory.Sequence(lambda n: f"INS{n}")
+    name = factory.Sequence(lambda n: f"Aseguradora {n}")
+    coverage_percent = 80
+    active = True
 
 
 class DoctorProfileFactory(factory.django.DjangoModelFactory):
@@ -89,6 +103,21 @@ class PatientProfileFactory(factory.django.DjangoModelFactory):
     gender = "F"
     blood_type = "O+"
     medical_history = []
+    insurance = factory.SubFactory(InsuranceFactory)
+    policy_number = "POL-TEST-0001"
+
+
+class BoxFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Box
+
+    code = factory.Sequence(lambda n: f"B{100 + n}")
+    name = factory.Sequence(lambda n: f"Box {100 + n}")
+    area = "Consulta externa"
+    floor = "Piso 1"
+    status = "FREE"
+    doctor = None
+    active = True
 
 
 class AvailabilityFactory(factory.django.DjangoModelFactory):
@@ -115,6 +144,19 @@ class AppointmentFactory(factory.django.DjangoModelFactory):
     end_time = factory.LazyFunction(lambda: datetime.time(9, 30))
     status = "PENDING"
     box = factory.LazyAttribute(lambda obj: obj.doctor.box)
+
+
+class ClinicalExamFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = ClinicalExam
+
+    appointment = factory.SubFactory(AppointmentFactory)
+    category = "LABORATORY"
+    name = "Hemograma completo"
+    result = "Sin alteraciones"
+    reference_range = ""
+    status = "COMPLETED"
+    performed_at = factory.Faker("date_object")
 
 
 class ConsultationNoteFactory(factory.django.DjangoModelFactory):

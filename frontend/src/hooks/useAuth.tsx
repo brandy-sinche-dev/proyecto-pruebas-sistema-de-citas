@@ -7,6 +7,7 @@ interface AuthContextValue {
   isAuthenticated: boolean
   login: (credentials: LoginCredentials) => Promise<AuthUser>
   logout: () => void
+  updateUser: (user: AuthUser) => void
 }
 
 const STORAGE_KEY = 'clinic-angry.auth.user'
@@ -43,9 +44,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }, [])
 
+  const updateUser = useCallback((next: AuthUser) => {
+    setUser(next)
+  }, [])
+
   const value = useMemo(
-    () => ({ user, isAuthenticated: Boolean(user), login, logout }),
-    [user, login, logout],
+    () => ({ user, isAuthenticated: Boolean(user), login, logout, updateUser }),
+    [user, login, logout, updateUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

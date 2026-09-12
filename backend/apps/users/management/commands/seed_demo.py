@@ -5,8 +5,11 @@ import datetime
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from apps.appointments.models import Appointment, ConsultationNote, Medication, Prescription
+from apps.appointments.models import Appointment, ClinicalExam, ConsultationNote, Medication, Prescription
+from apps.boxes.models import Box
 from apps.doctors.models import DoctorProfile
+from apps.finances.models import Billing, Insurance
+from apps.finances.services import create_billing
 from apps.patients.models import PatientProfile
 from apps.schedules.models import Availability
 from apps.specialties.models import Specialty
@@ -16,12 +19,30 @@ from apps.users.models import User
 PASSWORD = "ClinicaAngry1"
 
 SPECIALTIES = [
-    ("Cardiología", "#0D9488", "cardiology"),
-    ("Pediatría", "#0284C7", "pediatrics"),
-    ("Dermatología", "#7C3AED", "dermatology"),
-    ("Ginecología", "#DB2777", "gynecology"),
-    ("Traumatología", "#EA580C", "orthopedics"),
-    ("Medicina General", "#64748B", "stethoscope"),
+    # (nombre, color, icono, arancel)
+    ("Cardiología", "#0D9488", "cardiology", "180.00"),
+    ("Pediatría", "#0284C7", "pediatrics", "140.00"),
+    ("Dermatología", "#7C3AED", "dermatology", "165.00"),
+    ("Ginecología", "#DB2777", "gynecology", "165.00"),
+    ("Traumatología", "#EA580C", "orthopedics", "190.00"),
+    ("Medicina General", "#64748B", "stethoscope", "110.00"),
+]
+
+INSURANCES = [
+    ("RIM", "Rímac", 80),
+    ("PAC", "Pacífico", 70),
+    ("SAN", "Sanitas EPS", 65),
+    ("MAP", "Mapfre Salud", 60),
+]
+
+# box: id, code, name, area, floor, status, doctor_id_mock | None
+BOXES = [
+    ("B101", "Box 101", "Consulta externa", "Piso 1", "FREE", None),
+    ("B104", "Box 104", "Cardiología", "Piso 1", "IN_USE", 1),
+    ("B107", "Box 107", "Medicina General", "Piso 1", "IN_USE", 5),
+    ("B208", "Box 208", "Traumatología", "Piso 2", "IN_USE", 2),
+    ("B305", "Box 305", "Pediatría", "Piso 3", "IN_USE", 3),
+    ("B401", "Box 401", "Dermatología", "Piso 4", "FREE", None),
 ]
 
 # id_mock, nombre, especialidad, email, telefono, licencia, box, disponible, username
@@ -89,10 +110,11 @@ DOCTORS = [
 ]
 
 PATIENTS = [
-    ("María", "Gómez", "maria.gomez@mail.com", "+51 911 111 111", "70234561", "1990-05-12", "F", "O+", "paciente"),
-    ("Pedro", "López", "pedro.lopez@mail.com", "+51 922 222 222", "71345672", "1985-08-23", "M", "A+", "pedro"),
-    ("Rosa", "Quispe", "rosa.quispe@mail.com", "+51 933 333 333", "72456783", "1998-02-01", "F", "B+", "rosa"),
-    ("Juan", "Sánchez", "juan.sanchez@mail.com", "+51 944 444 444", "73567894", "1978-11-17", "M", "O−", "juan"),
+    # (nombre, apellido, email, telefono, dni, nacimiento, genero, sangre, username, aseguradora)
+    ("María", "Gómez", "maria.gomez@mail.com", "+51 911 111 111", "70234561", "1990-05-12", "F", "O+", "paciente", "RIM"),
+    ("Pedro", "López", "pedro.lopez@mail.com", "+51 922 222 222", "71345672", "1985-08-23", "M", "A+", "pedro", "PAC"),
+    ("Rosa", "Quispe", "rosa.quispe@mail.com", "+51 933 333 333", "72456783", "1998-02-01", "F", "B+", "rosa", ""),
+    ("Juan", "Sánchez", "juan.sanchez@mail.com", "+51 944 444 444", "73567894", "1978-11-17", "M", "O−", "juan", "SAN"),
 ]
 
 # disponibilidad: id_mock_doctor, dias_offset, inicio, fin, status, box
@@ -127,7 +149,13 @@ class Command(BaseCommand):
             return
 
         specialties = {
-            name: Specialty.objects.create(name=name, color=color, icon=icon) for name, color, icon in SPECIALTIES
+            name: Specialty.objects.create(name=name, color=color, icon=icon, fee=fee)
+            for name, color, icon, fee in SPECIALTIES
+        }
+
+        insurances = {
+            code: Insurance.objects.create(code=code, name=name, coverage_percent=coverage)
+            for code, name, coverage in INSURANCES
         }
 
         User.objects.create_superuser(
@@ -167,7 +195,7 @@ class Command(BaseCommand):
             )
 
         patients = {}
-        for first, last, email, phone, doc_num, birth, gender, blood, username in PATIENTS:
+        for first, last, email, phone, doc_num, birth, gender, blood, username, ins_code in PATIENTS:
             user = User.objects.create_user(
                 username=username,
                 email=email,
@@ -183,6 +211,18 @@ class Command(BaseCommand):
                 birth_date=datetime.date.fromisoformat(birth),
                 gender=gender,
                 blood_type=blood,
+                insurance=insurances.get(ins_code),
+                policy_number=f"POL-{ins_code}-0001" if ins_code else "",
+            )
+
+        for code, name, area, floor, status, doctor_mock_id in BOXES:
+            Box.objects.create(
+                code=code,
+                name=name,
+                area=area,
+                floor=floor,
+                status=status,
+                doctor=doctors.get(doctor_mock_id) if doctor_mock_id else None,
             )
 
         today = timezone.localdate()
@@ -226,11 +266,25 @@ class Command(BaseCommand):
         rx.medications.add(
             Medication.objects.create(name="Enalapril", dosage="10mg", frequency="Cada 24h", duration="30 días")
         )
+        ClinicalExam.objects.create(
+            appointment=current,
+            category="LABORATORY",
+            name="Perfil Lipídico Automatizado",
+            result="LDL 138 mg/dL",
+            reference_range="< 100 mg/dL",
+            status="COMPLETED",
+            performed_at=today,
+            notes="Levemente elevado.",
+        )
+        for appointment in appointments:
+            if appointment.status == "CONFIRMED":
+                create_billing(appointment=appointment, payment_method="WEB", status="PENDING")
 
         self.stdout.write(
             self.style.SUCCESS(
                 f"Seed listo: {User.objects.count()} usuarios, {Specialty.objects.count()} especialidades, "
                 f"{DoctorProfile.objects.count()} médicos, {PatientProfile.objects.count()} pacientes, "
+                f"{Box.objects.count()} boxes, {Insurance.objects.count()} aseguradoras, "
                 f"{Appointment.objects.count()} citas"
             )
         )

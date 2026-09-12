@@ -6,8 +6,10 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ErrorState, Spinner } from '@/components/ui/Feedback'
 import { useAppointments, useMutations } from '@/hooks/queries'
+import { transitionCopy, useTransitionConfirm } from '@/hooks/useTransitionConfirm'
 import { formatDateTime } from '@/lib/utils'
 import type { Appointment } from '@/types'
 
@@ -55,10 +57,13 @@ function AppointmentDetail({ appointment }: { appointment: Appointment }) {
 export function AdminAppointmentsPage() {
   const { data: appointments, isLoading, isError, error, refetch } = useAppointments()
   const { updateStatus } = useMutations()
+  const { pending, error: transitionError, ask, close, confirm } = useTransitionConfirm(updateStatus)
   const [selected, setSelected] = useState<Appointment | null>(null)
   const [filter, setFilter] = useState<Appointment['status'] | 'ALL'>('ALL')
 
   const visible = filter === 'ALL' ? appointments ?? [] : (appointments ?? []).filter((a) => a.status === filter)
+
+  const copy = transitionCopy(pending)
 
   const columns: Array<Column<Appointment>> = [
     {
@@ -102,7 +107,7 @@ export function AdminAppointmentsPage() {
               variant="health"
               onClick={(e) => {
                 e.stopPropagation()
-                updateStatus.mutate({ id: row.id, status: 'CONFIRMED' })
+                ask({ id: row.id, status: 'CONFIRMED' }, row)
               }}
             >
               Confirmar
@@ -115,7 +120,7 @@ export function AdminAppointmentsPage() {
                 variant="health"
                 onClick={(e) => {
                   e.stopPropagation()
-                  updateStatus.mutate({ id: row.id, status: 'COMPLETED' })
+                  ask({ id: row.id, status: 'COMPLETED' }, row)
                 }}
               >
                 Atendida
@@ -125,7 +130,7 @@ export function AdminAppointmentsPage() {
                 variant="secondary"
                 onClick={(e) => {
                   e.stopPropagation()
-                  updateStatus.mutate({ id: row.id, status: 'CANCELLED' })
+                  ask({ id: row.id, status: 'CANCELLED' }, row)
                 }}
               >
                 Cancelar
@@ -174,6 +179,18 @@ export function AdminAppointmentsPage() {
       <Modal open={Boolean(selected)} onClose={() => setSelected(null)} title={`Detalle: ${selected?.code ?? ''}`} size="lg">
         {selected && <AppointmentDetail appointment={selected} />}
       </Modal>
+
+      <ConfirmDialog
+        open={Boolean(pending)}
+        title={copy?.title ?? ''}
+        message={copy?.message ?? ''}
+        confirmLabel={copy?.label ?? 'Confirmar'}
+        variant={copy?.variant ?? 'primary'}
+        loading={updateStatus.isPending}
+        error={transitionError}
+        onConfirm={confirm}
+        onCancel={close}
+      />
     </>
   )
 }

@@ -1,4 +1,7 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import mixins, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.users.permissions import IsAdminRole, IsStaffRole
@@ -23,11 +26,19 @@ class PatientViewSet(
     http_method_names = ["get", "post", "put", "patch", "delete", "head", "options"]
 
     def get_permissions(self):
+        if self.action == "me":
+            return [IsAuthenticated()]
         if self.action in ("list", "create", "update", "partial_update"):
             return [IsStaffRole()]
         if self.action == "destroy":
             return [IsAdminRole()]
         return []
+
+    @action(detail=False, methods=["get"])
+    def me(self, request, *args, **kwargs):
+        """Perfil del paciente autenticado."""
+        profile = get_object_or_404(self.queryset, user=request.user)
+        return Response(PatientSerializer(profile).data)
 
     def get_queryset(self):
         user = self.request.user

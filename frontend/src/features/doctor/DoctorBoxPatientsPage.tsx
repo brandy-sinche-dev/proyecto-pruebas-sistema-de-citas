@@ -4,17 +4,18 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Avatar } from '@/components/ui/Avatar'
 import { StatusBadge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ErrorState, Spinner } from '@/components/ui/Feedback'
 import { useAppointments, useMutations } from '@/hooks/queries'
+import { transitionCopy, useTransitionConfirm } from '@/hooks/useTransitionConfirm'
 import type { Appointment } from '@/types'
-
-const DEMO_DOCTOR_ID = 1
 
 export function DoctorBoxPatientsPage() {
   const { data: appointments, isLoading, isError, error, refetch } = useAppointments()
   const { updateStatus } = useMutations()
+  const { pending, error: transitionError, ask, close, confirm } = useTransitionConfirm(updateStatus)
 
-  const mine = (appointments ?? []).filter((a) => a.doctorId === DEMO_DOCTOR_ID)
+  const mine = appointments ?? []
 
   const columns: Array<Column<Appointment>> = [
     {
@@ -48,15 +49,17 @@ export function DoctorBoxPatientsPage() {
       render: (row) => (
         <div className="flex gap-1">
           {row.status === 'PENDING' && (
-            <Button size="sm" variant="health" onClick={() => updateStatus.mutate({ id: row.id, status: 'CONFIRMED' })}>Confirmar</Button>
+            <Button size="sm" variant="health" onClick={() => ask({ id: row.id, status: 'CONFIRMED' }, row)}>Confirmar</Button>
           )}
           {row.status === 'CONFIRMED' && (
-            <Button size="sm" variant="health" onClick={() => updateStatus.mutate({ id: row.id, status: 'COMPLETED' })}>Marcar atendida</Button>
+            <Button size="sm" variant="health" onClick={() => ask({ id: row.id, status: 'COMPLETED' }, row)}>Marcar atendida</Button>
           )}
         </div>
       ),
     },
   ]
+
+  const copy = transitionCopy(pending)
 
   return (
     <>
@@ -71,6 +74,18 @@ export function DoctorBoxPatientsPage() {
           <DataTable columns={columns} rows={mine} empty="No tienes pacientes asignados todavía" />
         </CardBody>
       </Card>
+
+      <ConfirmDialog
+        open={Boolean(pending)}
+        title={copy?.title ?? ''}
+        message={copy?.message ?? ''}
+        confirmLabel={copy?.label ?? 'Confirmar'}
+        variant={copy?.variant ?? 'primary'}
+        loading={updateStatus.isPending}
+        error={transitionError}
+        onConfirm={confirm}
+        onCancel={close}
+      />
     </>
   )
 }

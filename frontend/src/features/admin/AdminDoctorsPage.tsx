@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { PageHeader } from '@/components/PageHeader'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -6,13 +9,40 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { ErrorState, Spinner } from '@/components/ui/Feedback'
-import { useDoctors } from '@/hooks/queries'
+import { Input, Select } from '@/components/ui/Input'
+import { AlertBanner, ErrorState, Spinner } from '@/components/ui/Feedback'
+import { useDoctors, useMutations, useSpecialties } from '@/hooks/queries'
 import type { Doctor } from '@/types'
+
+const doctorFormSchema = z.object({
+  firstName: z.string().min(2, 'El nombre es obligatorio'),
+  lastName: z.string().min(2, 'El apellido es obligatorio'),
+  email: z.string().email('Correo no válido'),
+  licenseNumber: z.string().min(5, 'N° de colegiatura inválido'),
+  specialty: z.coerce.number().int().positive('Selecciona una especialidad'),
+  box: z.string().optional(),
+  available: z.boolean().default(true),
+})
+
+type DoctorFormInput = z.input<typeof doctorFormSchema>
+type DoctorFormValues = z.infer<typeof doctorFormSchema>
 
 export function AdminDoctorsPage() {
   const { data: doctors, isLoading, isError, error, refetch } = useDoctors()
+  const { data: specialties } = useSpecialties()
+  const { createDoctor } = useMutations()
   const [selected, setSelected] = useState<Doctor | null>(null)
+  const [showModal, setShowModal] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<DoctorFormInput, unknown, DoctorFormValues>({
+    resolver: zodResolver(doctorFormSchema),
+    defaultValues: { available: true },
+  })
 
   const columns: Array<Column<Doctor>> = [
     {
@@ -47,13 +77,40 @@ export function AdminDoctorsPage() {
     },
   ]
 
+  function onSubmit(values: DoctorFormValues) {
+    setErrorMsg(null)
+    createDoctor.mutate(
+      {
+        firstName: values.firstName,
+        lastName: values.lastName,
+        email: values.email,
+        licenseNumber: values.licenseNumber,
+        specialty: values.specialty,
+        box: values.box ?? '',
+        available: values.available,
+      },
+      {
+        onSuccess: () => {
+          setShowModal(false)
+          reset()
+        },
+        onError: (err) => setErrorMsg(err.message),
+      },
+    )
+  }
+
   return (
     <>
       <PageHeader
         eyebrow="Gestión de personal"
         title="Médicos y turnos"
         description="Gestión de especialistas, boxes asignados y disponibilidad"
-        actions={<Button variant="health"><span className="material-symbols-outlined text-base">person_add</span> Nuevo médico</Button>}
+        actions={
+          <Button variant="health" onClick={() => setShowModal(true)}>
+            <span className="material-symbols-outlined text-base">person_add</span>
+            Nuevo médico
+          </Button>
+        }
       />
 
       {isLoading && <Spinner />}
@@ -97,6 +154,39 @@ export function AdminDoctorsPage() {
             )}
           </dl>
         )}
+      </Modal>
+
+      <Modal open={showModal} onClose={() => setShowModal(false)} title="Registrar médico">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+          {errorMsg && <AlertBanner variant="error">{errorMsg}</AlertBanner>}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input label="Nombres" placeholder="Elena" error={errors.firstName?.message} {...register('firstName')} />
+            <Input label="Apellidos" placeholder="Ramos" error={errors.lastName?.message} {...register('lastName')} />
+          </div>
+          <Input label="Correo" type="email" placeholder="medico@clinicangry.com" error={errors.email?.message} {...register('email')} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input label="N° de colegiatura" placeholder="CMP-0000" error={errors.licenseNumber?.message} {...register('licenseNumber')} />
+            <Select label="Especialidad" error={errors.specialty?.message} {...register('specialty')}>
+              <option value="">Selecciona…</option>
+              {(specialties ?? []).map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </Select>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input label="Box" placeholder="Box 104" error={errors.box?.message} {...register('box')} />
+            <label className="flex items-center gap-3 rounded-lg bg-surface px-3 py-2">
+              <input type="checkbox" className="accent-secondary" {...register('available')} />
+              <span className="text-sm text-on-surface">Disponible para citas</span>
+            </label>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setShowModal(false)}>Cancelar</Button>
+            <Button type="submit" disabled={createDoctor.isPending}>
+              {createDoctor.isPending ? 'Guardando…' : 'Guardar médico'}
+            </Button>
+          </div>
+        </form>
       </Modal>
     </>
   )

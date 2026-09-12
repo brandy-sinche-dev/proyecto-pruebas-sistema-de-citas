@@ -24,8 +24,10 @@ class AppointmentViewSet(
     http_method_names = ["get", "post", "head", "options"]
 
     def get_permissions(self):
-        if self.action in ("confirm", "cancel", "complete", "no_show"):
+        if self.action in ("confirm", "complete", "no_show", "check_in"):
             return [IsStaffRole()]
+        if self.action == "cancel":
+            return [IsAuthenticated()]
         return [IsAuthenticated()]
 
     def get_queryset(self):
@@ -53,7 +55,7 @@ class AppointmentViewSet(
             profile = PatientProfile.objects.filter(user=request.user).first()
             if profile is None:
                 return Response({"detail": "Perfil de paciente no encontrado."}, status=400)
-            payload["patientId"] = profile.id
+            payload["patientId"] = profile.user_id
         serializer = self.get_serializer(data=payload)
         serializer.is_valid(raise_exception=True)
         appointment = serializer.save()
@@ -62,7 +64,7 @@ class AppointmentViewSet(
     def _perform_transition(self, request, pk, target):
         appointment = self.get_object()
         try:
-            transition(appointment, target)
+            transition(appointment, target, actor=request.user)
         except AppointmentValidationError as exc:
             return Response({"detail": str(exc)}, status=400)
         return Response(AppointmentSerializer(appointment).data)
@@ -74,6 +76,10 @@ class AppointmentViewSet(
     @action(detail=True, methods=["post"])
     def cancel(self, request, pk=None):
         return self._perform_transition(request, pk, "CANCELLED")
+
+    @action(detail=True, methods=["post"])
+    def check_in(self, request, pk=None):
+        return self._perform_transition(request, pk, "CHECKED_IN")
 
     @action(detail=True, methods=["post"])
     def complete(self, request, pk=None):

@@ -1,15 +1,13 @@
-from datetime import date as date_cls
-
 from rest_framework import serializers
 
 from apps.doctors.models import DoctorProfile
-from apps.users.choices import AvailabilityStatus
 
 from .models import Availability
+from .services import AvailabilityValidationError, upsert_availability, validate_availability
 
 
 class AvailabilitySerializer(serializers.ModelSerializer):
-    doctorId = serializers.IntegerField(source="doctor_id", read_only=True)
+    doctorId = serializers.IntegerField(source="doctor.user_id", read_only=True)
     startTime = serializers.TimeField(source="start_time", format="%H:%M")
     endTime = serializers.TimeField(source="end_time", format="%H:%M")
 
@@ -18,26 +16,28 @@ class AvailabilitySerializer(serializers.ModelSerializer):
         fields = ["id", "doctorId", "date", "startTime", "endTime", "status", "box"]
 
     def validate(self, attrs):
-        start = attrs.get("start_time")
-        end = attrs.get("end_time")
-        slot_date = attrs.get("date")
-        if slot_date is not None and slot_date < date_cls.today():
-            raise serializers.ValidationError({"date": "No se puede registrar disponibilidad en el pasado."})
-        if start and end and start >= end:
-            raise serializers.ValidationError({"startTime": "La hora de inicio debe ser anterior a la de fin."})
+        try:
+            validate_availability(
+                attrs.get("date"),
+                attrs.get("start_time"),
+                attrs.get("end_time"),
+            )
+        except AvailabilityValidationError as exc:
+            raise serializers.ValidationError({exc.field: exc.message}) from exc
         return attrs
 
 
 class AvailabilityCreateSerializer(AvailabilitySerializer):
-    doctor = serializers.PrimaryKeyRelatedField(queryset=DoctorProfile.objects.all())
+    doctorId = serializers.IntegerField(write_only=True)
 
     class Meta(AvailabilitySerializer.Meta):
-        fields = AvailabilitySerializer.Meta.fields + ["doctor", "status"]
+        fields = AvailabilitySerializer.Meta.fields + ["doctorId", "status"]
+
+    def validate_doctorId(self, value: int) -> int:
+        if not DoctorProfile.objects.filter(user_id=value).exists():
+            raise serializers.ValidationError("No existe un médico con ese identificador.")
+        return value
 
     def create(self, validated_data):
-        doctor = validated_data.pop("doctor")
-        return Availability.objects.update_or_create(
-            doctor=doctor,
-            date=validated_data["date"],
-            defaults={**validated_data, "status": AvailabilityStatus.ACTIVE.value},
-        )[0]
+        doctor = DoctorProfile.objects.get(user_id=validated_data.pop("doctorId"))
+        return upsert_availability(doctor, validated_data)
