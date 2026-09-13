@@ -86,11 +86,11 @@ jobs:
           echo "login OK"
           echo "== doctors =="
           curl -fsS $B/doctors/ -H "Authorization: Bearer $TOKEN" | \
-            python3 -c "import sys,json;assert json.load(sys.stdin)['count']>0, 'sin doctores'"
+            python3 -c "import sys,json;d=json.load(sys.stdin);assert isinstance(d,list) and len(d)>0, 'sin doctores'"
           echo "doctors OK"
           echo "== specialties =="
           curl -fsS $B/specialties/ -H "Authorization: Bearer $TOKEN" | \
-            python3 -c "import sys,json;assert json.load(sys.stdin)['count']>0, 'sin especialidades'"
+            python3 -c "import sys,json;d=json.load(sys.stdin);assert isinstance(d,list) and len(d)>0, 'sin especialidades'"
           echo "specialties OK"
       - name: Logs ante fallo
         if: failure()
