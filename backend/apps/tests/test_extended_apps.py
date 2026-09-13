@@ -5,9 +5,7 @@ import datetime
 import pytest
 from django.utils import timezone
 
-from apps.appointments.models import Appointment, ClinicalExam
-from apps.boxes.models import Box
-from apps.finances.models import Billing, Insurance
+from apps.finances.models import Billing
 from apps.notifications.models import Notification
 from apps.patients.models import PatientProfile
 from apps.tests.factories import (

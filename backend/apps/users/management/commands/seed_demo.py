@@ -8,7 +8,7 @@ from django.utils import timezone
 from apps.appointments.models import Appointment, ClinicalExam, ConsultationNote, Medication, Prescription
 from apps.boxes.models import Box
 from apps.doctors.models import DoctorProfile
-from apps.finances.models import Billing, Insurance
+from apps.finances.models import Insurance
 from apps.finances.services import create_billing
 from apps.patients.models import PatientProfile
 from apps.schedules.models import Availability
@@ -111,7 +111,10 @@ DOCTORS = [
 
 PATIENTS = [
     # (nombre, apellido, email, telefono, dni, nacimiento, genero, sangre, username, aseguradora)
-    ("María", "Gómez", "maria.gomez@mail.com", "+51 911 111 111", "70234561", "1990-05-12", "F", "O+", "paciente", "RIM"),
+    (
+        "María", "Gómez", "maria.gomez@mail.com", "+51 911 111 111", "70234561",
+        "1990-05-12", "F", "O+", "paciente", "RIM",
+    ),
     ("Pedro", "López", "pedro.lopez@mail.com", "+51 922 222 222", "71345672", "1985-08-23", "M", "A+", "pedro", "PAC"),
     ("Rosa", "Quispe", "rosa.quispe@mail.com", "+51 933 333 333", "72456783", "1998-02-01", "F", "B+", "rosa", ""),
     ("Juan", "Sánchez", "juan.sanchez@mail.com", "+51 944 444 444", "73567894", "1978-11-17", "M", "O−", "juan", "SAN"),

@@ -185,7 +185,10 @@ def create_appointment(
 
     notify_user(
         doctor.user,
-        f"Nueva cita {appointment.code} agendada por {patient.user.full_name} el {date_} a las {start_time.strftime('%H:%M')}.",
+        (
+            f"Nueva cita {appointment.code} agendada por {patient.user.full_name} "
+            f"el {date_} a las {start_time.strftime('%H:%M')}."
+        ),
     )
     return appointment
 

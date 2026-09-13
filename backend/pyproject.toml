@@ -41,7 +41,18 @@ omit = ["*/migrations/*", "*/tests/*", "apps/*/tests.py"]
 [tool.ruff]
 line-length = 120
 target-version = "py312"
-exclude = ["*/migrations/*"]
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "build",
+    "dist",
+    ".pytest_cache",
+    ".ruff_cache",
+    "*.egg-info",
+    "*/migrations/*",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "DJ"]

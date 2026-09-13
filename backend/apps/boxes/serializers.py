@@ -4,7 +4,6 @@ from apps.doctors.models import DoctorProfile
 from apps.users.choices import BoxStatus
 
 from .models import Box
-from .services import BoxValidationError
 
 
 class BoxSerializer(serializers.ModelSerializer):
