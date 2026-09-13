@@ -74,14 +74,24 @@ jobs:
       - name: Smoke test API
         run: |
           set -e
-          echo "health: $(curl -fsS http://localhost:8000/api/v1/health/)"
-          TOKEN=$(curl -fsS -X POST http://localhost:8000/api/v1/auth/login/ \
+          B=http://localhost:8000/api/v1
+          echo "== health =="
+          curl -fsS $B/health/
+          echo
+          echo "== login =="
+          RESP=$(curl -fsS -X POST $B/auth/login/ \
             -H "Content-Type: application/json" \
-            -d '{"username":"admin","password":"ClinicaAngry1"}' | python -c "import sys,json;print(json.load(sys.stdin)['access'])")
-          curl -fsS http://localhost:8000/api/v1/doctors/ -H "Authorization: Bearer $TOKEN" | \
-            python -c "import sys,json;assert json.load(sys.stdin)['count']>0"
-          curl -fsS http://localhost:8000/api/v1/specialties/ -H "Authorization: Bearer $TOKEN" | \
-            python -c "import sys,json;assert json.load(sys.stdin)['count']>0"
+            -d '{"username":"admin","password":"ClinicaAngry1"}')
+          TOKEN=$(echo "$RESP" | python3 -c "import sys,json;print(json.load(sys.stdin)['access'])")
+          echo "login OK"
+          echo "== doctors =="
+          curl -fsS $B/doctors/ -H "Authorization: Bearer $TOKEN" | \
+            python3 -c "import sys,json;assert json.load(sys.stdin)['count']>0, 'sin doctores'"
+          echo "doctors OK"
+          echo "== specialties =="
+          curl -fsS $B/specialties/ -H "Authorization: Bearer $TOKEN" | \
+            python3 -c "import sys,json;assert json.load(sys.stdin)['count']>0, 'sin especialidades'"
+          echo "specialties OK"
       - name: Logs ante fallo
         if: failure()
         run: docker compose logs backend
