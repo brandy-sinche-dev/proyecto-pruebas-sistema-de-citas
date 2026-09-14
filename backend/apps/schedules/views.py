@@ -1,5 +1,4 @@
 from django.db import transaction
-
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -66,7 +65,10 @@ class AvailabilityViewSet(
             self.perform_destroy(instance)
         return Response(
             {
-                "detail": f"Disponibilidad eliminada. {cancelled} cita(s) programada(s) en esta franja fue(ron) cancelada(s).",
+                "detail": (
+                    f"Disponibilidad eliminada. {cancelled} cita(s) programada(s) "
+                    f"en esta franja fue(ron) cancelada(s)."
+                ),
                 "cancelledCount": cancelled,
             },
             status=200,

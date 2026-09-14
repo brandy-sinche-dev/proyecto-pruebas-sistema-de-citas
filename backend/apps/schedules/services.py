@@ -1,4 +1,4 @@
-"""Reglas de negocio de disponibilidad: validación de fechas/horarios, upsert por turno y cancelación de citas afectadas."""
+"""Reglas de negocio de disponibilidad: validación, upsert por turno y cancelación de citas."""
 
 from datetime import date as date_cls
 
@@ -10,8 +10,6 @@ from .models import Availability
 
 def appointments_in_slot(availability: Availability):
     """Citas programadas (pendientes o confirmadas) de un doctor que caen dentro de la franja de disponibilidad."""
-    from apps.appointments.models import Appointment
-
     return Appointment.objects.filter(
         doctor_id=availability.doctor_id,
         date=availability.date,
