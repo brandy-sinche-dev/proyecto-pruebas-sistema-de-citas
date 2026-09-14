@@ -1,7 +1,10 @@
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import { useMutations, useNotifications } from '@/hooks/queries'
 import { roleLabels } from './navigation'
 import { Avatar } from '@/components/ui/Avatar'
+import { formatDateTime } from '@/lib/utils'
 
 export type PortalKey = 'admin' | 'medico' | 'recepcion' | 'paciente'
 
@@ -27,12 +30,36 @@ const portalTitles: Record<PortalKey, string> = {
 export function Header({ portal }: { portal: string }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [open, setOpen] = useState(false)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const { data: notifications, isLoading } = useNotifications(Boolean(user))
+  const { markNotificationRead } = useMutations()
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   if (!user) return null
   const key = getPortalKey(portal)
+  const unread = notifications?.filter((n) => !n.read).length ?? 0
 
   function handleLogout() {
     logout()
     navigate('/login', { replace: true })
+  }
+
+  function markRead(id: number) {
+    markNotificationRead.mutate(id)
+  }
+
+  function markAllRead() {
+    notifications?.filter((n) => !n.read).forEach((n) => markNotificationRead.mutate(n.id))
   }
 
   return (
@@ -82,14 +109,76 @@ export function Header({ portal }: { portal: string }) {
             {roleLabels[user.role]}
           </span>
         </span>
-        <button
-          type="button"
-          className="relative rounded-lg p-2 text-on-surface-variant transition-colors hover:bg-surface-container hover:text-on-surface"
-          aria-label="Notificaciones"
-        >
-          <span className="material-symbols-outlined text-xl">notifications</span>
-          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-error" aria-hidden="true" />
-        </button>
+
+        <div className="relative" ref={panelRef}>
+          <button
+            type="button"
+            onClick={() => setOpen((value) => !value)}
+            className="relative rounded-lg p-2 text-on-surface-variant transition-colors hover:bg-surface-container hover:text-on-surface"
+            aria-label={`Notificaciones${unread > 0 ? ` (${unread} sin leer)` : ''}`}
+            aria-expanded={open}
+          >
+            <span className="material-symbols-outlined text-xl">notifications</span>
+            {unread > 0 && (
+              <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold leading-none text-white">
+                {unread > 9 ? '9+' : unread}
+              </span>
+            )}
+          </button>
+
+          {open && (
+            <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-header">
+              <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                <p className="text-sm font-semibold text-on-surface">Notificaciones</p>
+                {unread > 0 && (
+                  <button
+                    type="button"
+                    onClick={markAllRead}
+                    className="text-xs font-medium text-primary hover:underline"
+                  >
+                    Marcar todas como leídas
+                  </button>
+                )}
+              </div>
+              <div className="max-h-80 overflow-y-auto">
+                {isLoading && (
+                  <p className="px-4 py-6 text-center text-sm text-on-surface-variant">Cargando…</p>
+                )}
+                {!isLoading && (!notifications || notifications.length === 0) && (
+                  <p className="px-4 py-6 text-center text-sm text-on-surface-variant">No tienes notificaciones</p>
+                )}
+                {notifications?.map((notification) => (
+                  <button
+                    key={notification.id}
+                    type="button"
+                    onClick={() => !notification.read && markRead(notification.id)}
+                    className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface ${
+                      notification.read ? '' : 'bg-primary/5'
+                    }`}
+                  >
+                    <span
+                      className={`material-symbols-outlined mt-0.5 text-lg ${
+                        notification.read ? 'text-outline' : 'text-primary'
+                      }`}
+                    >
+                      {notification.read ? 'notifications_none' : 'notifications_active'}
+                    </span>
+                    <span className="flex-1">
+                      <span className="block text-sm leading-snug text-on-surface">{notification.message}</span>
+                      <span className="mt-0.5 block text-xs text-on-surface-variant">
+                        {formatDateTime(notification.createdAt)}
+                      </span>
+                    </span>
+                    {!notification.read && (
+                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="flex items-center gap-2 pl-1">
           <Avatar name={user.fullName} />
           <div className="hidden text-left xl:block">

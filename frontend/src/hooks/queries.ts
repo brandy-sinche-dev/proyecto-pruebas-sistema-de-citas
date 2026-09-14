@@ -29,10 +29,15 @@ export const queryKeys = {
   exams: ['exams'] as const,
   insurances: ['insurances'] as const,
   billings: ['billings'] as const,
+  notifications: ['notifications'] as const,
 }
 
 export function useAppointments() {
-  return useQuery({ queryKey: queryKeys.appointments, queryFn: () => api.getAppointments() })
+  return useQuery({
+    queryKey: queryKeys.appointments,
+    queryFn: () => api.getAppointments(),
+    refetchInterval: 15_000,
+  })
 }
 
 export function useDashboard() {
@@ -86,6 +91,15 @@ export function useAppointmentsToday() {
   return { data: todayAppointments, ...rest }
 }
 
+export function useNotifications(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.notifications,
+    queryFn: () => api.getNotifications(),
+    enabled,
+    refetchInterval: enabled ? 30000 : false,
+  })
+}
+
 export function useMutations() {
   const queryClient = useQueryClient()
 
@@ -95,6 +109,7 @@ export function useMutations() {
     void queryClient.invalidateQueries({ queryKey: queryKeys.availability })
     void queryClient.invalidateQueries({ queryKey: queryKeys.consultations })
     void queryClient.invalidateQueries({ queryKey: queryKeys.prescriptions })
+    void queryClient.invalidateQueries({ queryKey: queryKeys.notifications })
   }
 
   const createAppointment = useMutation({
@@ -134,11 +149,37 @@ export function useMutations() {
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: number; status: Appointment['status'] }) =>
       api.updateAppointmentStatus(id, status),
-    onSuccess: invalidate,
+    onSuccess: (updated) => {
+      queryClient.setQueryData<Appointment[]>(queryKeys.appointments, (old) =>
+        old?.map((a) => (a.id === updated.id ? { ...a, ...updated } : a)),
+      )
+      invalidate()
+    },
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.appointments })
+    },
+  })
+
+  const markNotificationRead = useMutation({
+    mutationFn: (id: number) => api.markNotificationRead(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications })
+    },
   })
 
   const createAvailability = useMutation({
     mutationFn: (payload: AvailabilityCreatePayload) => api.createAvailability(payload),
+    onSuccess: invalidate,
+  })
+
+  const updateAvailability = useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: Partial<AvailabilityCreatePayload> }) =>
+      api.updateAvailability(id, payload),
+    onSuccess: invalidate,
+  })
+
+  const deleteAvailability = useMutation({
+    mutationFn: (id: number) => api.deleteAvailability(id),
     onSuccess: invalidate,
   })
 
@@ -179,7 +220,10 @@ export function useMutations() {
     createSpecialty,
     updateProfile,
     updateStatus,
+    markNotificationRead,
     createAvailability,
+    updateAvailability,
+    deleteAvailability,
     createConsultationNote,
     createPrescription,
     createBox,

@@ -52,7 +52,13 @@ export function DoctorBoxPatientsPage() {
             <Button size="sm" variant="health" onClick={() => ask({ id: row.id, status: 'CONFIRMED' }, row)}>Confirmar</Button>
           )}
           {row.status === 'CONFIRMED' && (
-            <Button size="sm" variant="health" onClick={() => ask({ id: row.id, status: 'COMPLETED' }, row)}>Marcar atendida</Button>
+            <Button size="sm" variant="health" onClick={() => ask({ id: row.id, status: 'CHECKED_IN' }, row)}>Iniciar consulta</Button>
+          )}
+          {row.status === 'CHECKED_IN' && (
+            <>
+              <Button size="sm" variant="health" onClick={() => ask({ id: row.id, status: 'COMPLETED' }, row)}>Finalizar atención</Button>
+              <Button size="sm" variant="secondary" onClick={() => ask({ id: row.id, status: 'NO_SHOW' }, row)}>No asistió</Button>
+            </>
           )}
         </div>
       ),

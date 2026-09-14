@@ -1,3 +1,5 @@
+from django.db import transaction
+
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -6,6 +8,7 @@ from apps.users.permissions import IsAdminOrDoctor
 
 from .models import Availability
 from .serializers import AvailabilityCreateSerializer, AvailabilitySerializer
+from .services import cancel_appointments_in_slot
 
 
 class AvailabilityViewSet(
@@ -42,6 +45,32 @@ class AvailabilityViewSet(
 
     def perform_create(self, serializer):
         serializer.save()
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            self.perform_update(serializer)
+            cancelled = cancel_appointments_in_slot(instance)
+
+        data = AvailabilitySerializer(instance).data
+        data["cancelledCount"] = cancelled
+        return Response(data)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        with transaction.atomic():
+            cancelled = cancel_appointments_in_slot(instance)
+            self.perform_destroy(instance)
+        return Response(
+            {
+                "detail": f"Disponibilidad eliminada. {cancelled} cita(s) programada(s) en esta franja fue(ron) cancelada(s).",
+                "cancelledCount": cancelled,
+            },
+            status=200,
+        )
 
     def create(self, request, *args, **kwargs):
         data = dict(request.data)

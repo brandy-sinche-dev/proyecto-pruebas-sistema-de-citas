@@ -1,4 +1,4 @@
-from rest_framework import views
+﻿from rest_framework import views
 from rest_framework.response import Response
 
 from apps.users.permissions import IsStaffRole
@@ -14,4 +14,4 @@ class DashboardView(views.APIView):
         def _ser(items):
             return AppointmentSerializer(items, many=True, context={"request": request}).data
 
-        return Response(dashboard_stats(_ser))
+        return Response(dashboard_stats(_ser, user=request.user))

@@ -29,6 +29,7 @@ import type {
   PrescriptionPayload,
   ProfileUpdatePayload,
   RegisterPayload,
+  Notification,
 } from '../../types'
 
 const now = Date.now()
@@ -380,6 +381,13 @@ const users: User[] = [
   { id: 4, username: 'paciente', email: 'maria.gomez@mail.com', firstName: 'María', lastName: 'Gómez', role: 'patient', isActive: true },
 ]
 
+const notifications: Notification[] = [
+  { id: 1, userId: 1, message: 'Nueva cita CIT-2026-0001 agendada para hoy.', read: false, createdAt: new Date(now - 3600_000).toISOString() },
+  { id: 2, userId: 1, message: 'La cita CIT-2026-0002 fue confirmada por el médico.', read: false, createdAt: new Date(now - 7200_000 * 2).toISOString() },
+  { id: 3, userId: 3, message: 'Nueva cita CIT-2026-0001 agendada por María Gómez.', read: true, createdAt: new Date(now - 3600_000 * 3).toISOString() },
+  { id: 4, userId: 4, message: 'Tu cita CIT-2026-0002 fue confirmada.', read: false, createdAt: new Date(now - 3600_000 * 4).toISOString() },
+]
+
 const auditLogs: AuditLog[] = [
   { id: 1, userId: 1, userName: 'Claudia Director', action: 'APPROVE_APPOINTMENT', module: 'appointments', method: 'POST', path: '/api/v1/appointments/9/confirm/', statusCode: 200, timestamp: new Date(now - 3600_000 * 3).toISOString(), metadata: { appointmentId: 9 } },
   { id: 2, userId: 3, userName: 'Elena Ramos', action: 'CREATE_PRESCRIPTION', module: 'prescriptions', method: 'POST', path: '/api/v1/prescriptions/', statusCode: 201, timestamp: new Date(now - 3600_000 * 4).toISOString(), metadata: { patientId: 1 } },
@@ -408,6 +416,49 @@ function ownPatient() {
 function ownDoctor() {
   if (!currentUser || currentUser.role !== 'doctor') return null
   return doctors.find((d) => d.email.toLowerCase() === currentUser?.email.toLowerCase()) ?? null
+}
+
+function notifyUser(userId: number | undefined, message: string) {
+  if (!userId || !message) return
+  notifications.push({
+    id: nextId(notifications),
+    userId,
+    message,
+    read: false,
+    createdAt: new Date().toISOString(),
+  })
+}
+
+function notifyForTransition(appointment: Appointment, status: Appointment['status']) {
+  if (status === 'PENDING') return
+  const patient = patients.find((p) => p.id === appointment.patientId)
+  const doctor = doctors.find((d) => d.id === appointment.doctorId)
+  const patientUserId = users.find((u) => u.email.toLowerCase() === patient?.email.toLowerCase())?.id
+  const doctorUserId = users.find((u) => u.email.toLowerCase() === doctor?.email.toLowerCase())?.id
+  const code = appointment.code
+  if (status === 'CONFIRMED') notifyUser(patientUserId, `Tu cita ${code} fue confirmada.`)
+  if (status === 'COMPLETED') notifyUser(patientUserId, `Tu cita ${code} fue atendida.`)
+  if (status === 'CANCELLED') notifyUser(patientUserId, `Tu cita ${code} fue cancelada.`)
+  if (status === 'NO_SHOW') notifyUser(patientUserId, `Tu cita ${code} fue registrada como no asistida.`)
+  if (status === 'CHECKED_IN') {
+    notifyUser(patientUserId, `Check-in registrado para tu cita ${code}.`)
+    notifyUser(doctorUserId, `El paciente llegó para la cita ${code}.`)
+  }
+}
+
+function cancelAppointmentsInSlotMock(slot: AvailabilitySlot): number {
+  const affected = baseAppointments.filter(
+    (a) =>
+      a.doctorId === slot.doctorId &&
+      a.date === slot.date &&
+      (a.status === 'PENDING' || a.status === 'CONFIRMED') &&
+      a.startTime < slot.endTime &&
+      a.endTime > slot.startTime,
+  )
+  for (const appointment of affected) {
+    appointment.status = 'CANCELLED'
+  }
+  return affected.length
 }
 
 export const mockApi = {
@@ -581,7 +632,25 @@ export const mockApi = {
     const appointment = baseAppointments.find((a) => a.id === id)
     if (!appointment) throw new Error('Cita no encontrada')
     appointment.status = status
+    notifyForTransition(appointment, status)
     return appointment
+  },
+
+  async getNotifications(): Promise<Notification[]> {
+    await delay(150)
+    const userId = currentUser?.id
+    if (!userId) return []
+    return notifications
+      .filter((n) => n.userId === userId)
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+  },
+
+  async markNotificationRead(id: number): Promise<Notification> {
+    await delay(150)
+    const notification = notifications.find((n) => n.id === id)
+    if (!notification) throw new Error('Notificación no encontrada')
+    notification.read = true
+    return notification
   },
 
   async getAvailability(): Promise<AvailabilitySlot[]> {
@@ -604,6 +673,26 @@ export const mockApi = {
     return slot
   },
 
+  async updateAvailability(id: number, payload: Partial<AvailabilityCreatePayload>): Promise<AvailabilitySlot & { cancelledCount: number }> {
+    await delay()
+    const slot = availability.find((s) => s.id === id)
+    if (!slot) throw new Error('Disponibilidad no encontrada')
+    const { doctorId: _doctorId, ...rest } = payload
+    Object.assign(slot, rest)
+    const cancelledCount = cancelAppointmentsInSlotMock(slot)
+    return { ...slot, cancelledCount }
+  },
+
+  async deleteAvailability(id: number): Promise<{ cancelledCount: number }> {
+    await delay()
+    const index = availability.findIndex((s) => s.id === id)
+    if (index === -1) throw new Error('Disponibilidad no encontrada')
+    const slot = availability[index]
+    const cancelledCount = cancelAppointmentsInSlotMock(slot)
+    availability.splice(index, 1)
+    return { cancelledCount }
+  },
+
   async getDashboard(): Promise<DashboardSummary> {
     await delay()
     const today = baseAppointments.filter((a) => a.date === todayISO)
@@ -616,6 +705,7 @@ export const mockApi = {
       confirmedCount: today.filter((a) => a.status === 'CONFIRMED').length,
       checkedInCount: today.filter((a) => a.status === 'CHECKED_IN').length,
       inConsultationCount: 6,
+      attendedCount: today.filter((a) => a.status === 'COMPLETED').length,
       revenue: 186200,
       nextAppointments: baseAppointments.slice(0, 3),
       recentAppointments: baseAppointments.slice(0, 5),

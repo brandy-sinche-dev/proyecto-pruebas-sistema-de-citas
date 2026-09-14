@@ -10,7 +10,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ErrorState, Spinner } from '@/components/ui/Feedback'
 import { useAppointments, useMutations } from '@/hooks/queries'
 import { transitionCopy, useTransitionConfirm } from '@/hooks/useTransitionConfirm'
-import { formatDateTime } from '@/lib/utils'
+import { formatDateTime, canCancelAppointment } from '@/lib/utils'
 import type { Appointment } from '@/types'
 
 function AppointmentDetail({ appointment }: { appointment: Appointment }) {
@@ -58,8 +58,10 @@ export function AdminAppointmentsPage() {
   const { data: appointments, isLoading, isError, error, refetch } = useAppointments()
   const { updateStatus } = useMutations()
   const { pending, error: transitionError, ask, close, confirm } = useTransitionConfirm(updateStatus)
-  const [selected, setSelected] = useState<Appointment | null>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
   const [filter, setFilter] = useState<Appointment['status'] | 'ALL'>('ALL')
+
+  const selected = (appointments ?? []).find((a) => a.id === selectedId) ?? null
 
   const visible = filter === 'ALL' ? appointments ?? [] : (appointments ?? []).filter((a) => a.status === filter)
 
@@ -98,7 +100,7 @@ export function AdminAppointmentsPage() {
       header: 'Acciones',
       render: (row) => (
         <div className="flex flex-wrap items-center gap-1">
-          <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); setSelected(row) }}>
+          <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); setSelectedId(row.id) }}>
             Ver
           </Button>
           {row.status === 'PENDING' && (
@@ -125,16 +127,18 @@ export function AdminAppointmentsPage() {
               >
                 Atendida
               </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  ask({ id: row.id, status: 'CANCELLED' }, row)
-                }}
-              >
-                Cancelar
-              </Button>
+              {canCancelAppointment(row.date, row.startTime) && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    ask({ id: row.id, status: 'CANCELLED' }, row)
+                  }}
+                >
+                  Cancelar
+                </Button>
+              )}
             </>
           )}
         </div>
@@ -172,11 +176,11 @@ export function AdminAppointmentsPage() {
       <Card>
         <CardHeader title={`Listado de citas (${visible.length})`} subtitle="Reglas de negocio validadas en el backend de la clínica" />
         <CardBody className="p-0">
-          <DataTable columns={columns} rows={visible} onRowClick={setSelected} empty="No hay citas que coincidan con el filtro" />
+          <DataTable columns={columns} rows={visible} onRowClick={(row) => setSelectedId(row.id)} empty="No hay citas que coincidan con el filtro" />
         </CardBody>
       </Card>
 
-      <Modal open={Boolean(selected)} onClose={() => setSelected(null)} title={`Detalle: ${selected?.code ?? ''}`} size="lg">
+      <Modal open={Boolean(selected)} onClose={() => setSelectedId(null)} title={`Detalle: ${selected?.code ?? ''}`} size="lg">
         {selected && <AppointmentDetail appointment={selected} />}
       </Modal>
 

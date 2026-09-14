@@ -7,6 +7,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ErrorState, Spinner } from '@/components/ui/Feedback'
 import { useAppointments, useMutations } from '@/hooks/queries'
 import { transitionCopy, useTransitionConfirm } from '@/hooks/useTransitionConfirm'
+import { toLocalDateKey } from '@/lib/utils'
 
 const HOURS = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00']
 
@@ -14,18 +15,22 @@ export function DoctorAgendaPage() {
   const { data: appointments, isLoading, isError, error, refetch } = useAppointments()
   const { updateStatus } = useMutations()
   const { pending, error: transitionError, ask, close, confirm } = useTransitionConfirm(updateStatus)
-  const [dayOffset, setDayOffset] = useState(0)
+  const [selectedDate, setSelectedDate] = useState(() => toLocalDateKey(new Date()))
 
-  const today = new Date()
-  today.setDate(today.getDate() + dayOffset)
-  const dateKey = today.toISOString().split('T')[0]
+  const selected = new Date(`${selectedDate}T00:00:00`)
 
   const dayAppointments = (appointments ?? [])
-    .filter((a) => a.date === dateKey)
+    .filter((a) => a.date === selectedDate)
     .sort((a, b) => a.startTime.localeCompare(b.startTime))
 
   const appointmentForHour = (hour: string) =>
     dayAppointments.find((a) => a.startTime.split(':')[0] === hour.split(':')[0])
+
+  const shiftDay = (delta: number) => {
+    const next = new Date(selected)
+    next.setDate(next.getDate() + delta)
+    setSelectedDate(toLocalDateKey(next))
+  }
 
   const copy = transitionCopy(pending)
 
@@ -33,15 +38,22 @@ export function DoctorAgendaPage() {
     <>
       <PageHeader
         eyebrow="Portal médico asistencial"
-        title={`Agenda diaria · ${today.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}`}
+        title={`Agenda diaria · ${selected.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}`}
         description="Box 104 · Cardiología Adultos · En guardia activa"
         actions={
           <div className="flex items-center gap-1 rounded-lg bg-surface p-1">
-            <Button variant="ghost" size="sm" onClick={() => setDayOffset((o) => o - 1)} aria-label="Día anterior">
+            <Button variant="ghost" size="sm" onClick={() => shiftDay(-1)} aria-label="Día anterior">
               <span className="material-symbols-outlined text-base">chevron_left</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setDayOffset(0)}>Hoy</Button>
-            <Button variant="ghost" size="sm" onClick={() => setDayOffset((o) => o + 1)} aria-label="Día siguiente">
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(event) => event.target.value && setSelectedDate(event.target.value)}
+              className="input w-40 px-2 py-1 text-sm tabular"
+              aria-label="Fecha de la agenda"
+            />
+            <Button variant="ghost" size="sm" onClick={() => setSelectedDate(toLocalDateKey(new Date()))}>Hoy</Button>
+            <Button variant="ghost" size="sm" onClick={() => shiftDay(1)} aria-label="Día siguiente">
               <span className="material-symbols-outlined text-base">chevron_right</span>
             </Button>
           </div>
@@ -80,7 +92,7 @@ export function DoctorAgendaPage() {
                 )}
                 {appointment.status === 'CONFIRMED' && (
                   <>
-                    <Button size="sm" variant="health" onClick={() => ask({ id: appointment.id, status: 'COMPLETED' }, appointment)}>
+                    <Button size="sm" variant="health" onClick={() => ask({ id: appointment.id, status: 'CHECKED_IN' }, appointment)}>
                       Iniciar consulta
                     </Button>
                     <Button size="sm" variant="secondary" onClick={() => ask({ id: appointment.id, status: 'NO_SHOW' }, appointment)}>
@@ -92,23 +104,21 @@ export function DoctorAgendaPage() {
             </div>
           ))}
 
-          {dayOffset === 0 && (
-            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {HOURS.map((hour) => {
-                const appt = appointmentForHour(hour)
-                return (
-                  <div key={hour} className="rounded-lg border border-slate-200 bg-surface-bright p-2">
-                    <p className="tabular text-xs font-semibold text-on-surface-variant">{hour} h</p>
-                    {appt ? (
-                      <p className="text-sm text-on-surface">{appt.patientName}</p>
-                    ) : (
-                      <p className="text-sm text-slate-300">Libre</p>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {HOURS.map((hour) => {
+              const appt = appointmentForHour(hour)
+              return (
+                <div key={hour} className="rounded-lg border border-slate-200 bg-surface-bright p-2">
+                  <p className="tabular text-xs font-semibold text-on-surface-variant">{hour} h</p>
+                  {appt ? (
+                    <p className="text-sm text-on-surface">{appt.patientName}</p>
+                  ) : (
+                    <p className="text-sm text-slate-300">Libre</p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </CardBody>
       </Card>
 

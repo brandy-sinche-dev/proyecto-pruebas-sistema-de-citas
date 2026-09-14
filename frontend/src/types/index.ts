@@ -270,6 +270,7 @@ export interface DashboardSummary {
   confirmedCount: number
   checkedInCount: number
   inConsultationCount: number
+  attendedCount: number
   revenue: number
   nextAppointments: Appointment[]
   recentAppointments: Appointment[]

@@ -5,13 +5,15 @@ import { z } from 'zod'
 import { PageHeader } from '@/components/PageHeader'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 import { Avatar } from '@/components/ui/Avatar'
-import { Badge } from '@/components/ui/Badge'
+import { StatusBadge, Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ErrorState, Spinner } from '@/components/ui/Feedback'
-import { useAppointments, useConsultationNotes, useDoctors, useMutations, usePatients } from '@/hooks/queries'
+import { useAppointments, useConsultationNotes, useDoctors, useMutations, usePatients, usePrescriptions } from '@/hooks/queries'
 import { useAuth } from '@/hooks/useAuth'
+import { transitionCopy, useTransitionConfirm } from '@/hooks/useTransitionConfirm'
 import { formatDateTime } from '@/lib/utils'
 
 const noteSchema = z.object({
@@ -26,12 +28,15 @@ type NoteFormInput = z.input<typeof noteSchema>
 
 export function DoctorClinicalRecordsPage() {
   const { data: notes, isLoading: loadingNotes, isError, error, refetch } = useConsultationNotes()
+  const { data: prescriptions } = usePrescriptions()
   const { data: patients } = usePatients()
   const { data: doctors } = useDoctors()
   const { data: appointments } = useAppointments()
   const { user } = useAuth()
-  const { createConsultationNote } = useMutations()
+  const { createConsultationNote, updateStatus } = useMutations()
+  const { pending, error: transitionError, ask, close, confirm } = useTransitionConfirm(updateStatus)
   const [modalOpen, setModalOpen] = useState(false)
+  const [finishWarningOpen, setFinishWarningOpen] = useState(false)
   const {
     register,
     handleSubmit,
@@ -44,6 +49,17 @@ export function DoctorClinicalRecordsPage() {
 
   const doctorId = (doctors ?? []).find((doctor) => doctor.email === user?.email)?.id
   const mine = doctorId ? (notes ?? []).filter((note) => note.doctorId === doctorId) : (notes ?? [])
+
+  const activeAppointment = (appointments ?? [])
+    .filter((a) => a.status === 'CHECKED_IN')
+    .sort((a, b) => (a.date === b.date ? a.startTime.localeCompare(b.startTime) : a.date.localeCompare(b.date)))[0]
+
+  const activePatient = activeAppointment ? (patients ?? []).find((p) => p.id === activeAppointment.patientId) : undefined
+
+  const hasNote = activeAppointment ? (notes ?? []).some((n) => n.appointmentId === activeAppointment.id) : false
+  const hasMedication = activeAppointment
+    ? (prescriptions ?? []).some((p) => p.appointmentId === activeAppointment.id && p.medications.length > 0)
+    : false
 
   const submitError =
     createConsultationNote.isError && createConsultationNote.error
@@ -60,6 +76,17 @@ export function DoctorClinicalRecordsPage() {
       },
     })
   })
+
+  const handleFinish = () => {
+    if (!activeAppointment) return
+    if (hasNote && hasMedication) {
+      ask({ id: activeAppointment.id, status: 'COMPLETED' }, activeAppointment)
+    } else {
+      setFinishWarningOpen(true)
+    }
+  }
+
+  const copy = transitionCopy(pending)
 
   return (
     <>
@@ -106,29 +133,76 @@ export function DoctorClinicalRecordsPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Consulta activa" subtitle="Paciente en atención actual" />
+          <CardHeader title="Consulta activa" subtitle={activeAppointment ? 'Paciente en atención actual' : 'Sin paciente en consulta'} />
           <CardBody>
-            <div className="flex flex-col items-center gap-3 rounded-lg border border-slate-200 bg-surface-bright p-4 text-center">
-              <Avatar name="María Gómez" className="h-14 w-14" />
-              <div>
-                <p className="font-display text-base font-semibold text-primary">María Gómez</p>
-                <p className="text-sm text-on-surface-variant">DNI 70234561 · O+</p>
+            {activeAppointment ? (
+              <>
+                <div className="flex flex-col items-center gap-3 rounded-lg border border-slate-200 bg-surface-bright p-4 text-center">
+                  <Avatar name={activeAppointment?.patientName ?? 'Paciente'} className="h-14 w-14" />
+                  <div>
+                    <p className="font-display text-base font-semibold text-primary">{activeAppointment?.patientName}</p>
+                    <p className="text-sm text-on-surface-variant">
+                      {activePatient?.documentNumber ? `DNI ${activePatient.documentNumber} · ` : ''}
+                      {activePatient?.bloodType ?? 'S/G'} · {activeAppointment?.code}
+                    </p>
+                  </div>
+                  <StatusBadge status="CHECKED_IN" />
+                </div>
+                <div className="mt-3 flex flex-col gap-1 rounded-lg border border-slate-200 bg-surface-bright px-3 py-2 text-xs text-on-surface-variant">
+                  <p>
+                    <span className="material-symbols-outlined text-sm align-text-bottom">clinical_notes</span>{' '}
+                    <strong>Nota de evolución:</strong> {hasNote ? 'Registrada' : 'Pendiente'}
+                  </p>
+                  <p>
+                    <span className="material-symbols-outlined text-sm align-text-bottom">medication</span>{' '}
+                    <strong>Medicamento recetado:</strong> {hasMedication ? 'Registrado' : 'Pendiente'}
+                  </p>
+                </div>
+                <div className="mt-4 flex flex-col gap-2">
+                  <Button variant="destructive" size="sm" onClick={() => ask({ id: activeAppointment!.id, status: 'NO_SHOW' }, activeAppointment!)}>
+                    <span className="material-symbols-outlined text-base">person_off</span>
+                    Marcar no asistió
+                  </Button>
+                  <Button variant="health" size="sm" onClick={handleFinish}>
+                    <span className="material-symbols-outlined text-base">check_circle</span>
+                    Finalizar atención
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-surface-bright p-6 text-center">
+                <span className="material-symbols-outlined text-3xl text-slate-300">personal_off</span>
+                <p className="text-sm text-on-surface-variant">No hay paciente en consulta activa.</p>
               </div>
-              <Badge className="border-secondary/30 bg-secondary/10 text-secondary">En consulta</Badge>
-            </div>
-            <div className="mt-4 flex flex-col gap-2">
-              <Button variant="destructive" size="sm">
-                <span className="material-symbols-outlined text-base">person_off</span>
-                Marcar no asistió
-              </Button>
-              <Button variant="health" size="sm">
-                <span className="material-symbols-outlined text-base">check_circle</span>
-                Finalizar atención
-              </Button>
-            </div>
+            )}
           </CardBody>
         </Card>
       </div>
+
+      <Modal open={finishWarningOpen} onClose={() => setFinishWarningOpen(false)} title="Faltan registros para finalizar" size="sm">
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-on-surface">
+            {activeAppointment ? `El paciente ${activeAppointment.patientName} no tiene registrado:` : ''}
+          </p>
+          <ul className="flex flex-col gap-1">
+            {!hasNote && <li className="text-sm text-on-surface-variant">• Nota de evolución (diagnóstico/tratamiento)</li>}
+            {!hasMedication && <li className="text-sm text-on-surface-variant">• Un medicamento recetado</li>}
+          </ul>
+          <p className="text-sm text-on-surface">¿Desea finalizar la atención de todos modos?</p>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setFinishWarningOpen(false)}>Cancelar</Button>
+            <Button
+              variant="health"
+              onClick={() => {
+                if (activeAppointment) ask({ id: activeAppointment.id, status: 'COMPLETED' }, activeAppointment)
+                setFinishWarningOpen(false)
+              }}
+            >
+              Sí, finalizar
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Nueva nota de evolución">
         <form className="flex flex-col gap-4" noValidate onSubmit={onSubmit}>
@@ -158,6 +232,18 @@ export function DoctorClinicalRecordsPage() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        open={Boolean(pending)}
+        title={copy?.title ?? ''}
+        message={copy?.message ?? ''}
+        confirmLabel={copy?.label ?? 'Confirmar'}
+        variant={copy?.variant ?? 'primary'}
+        loading={updateStatus.isPending}
+        error={transitionError}
+        onConfirm={confirm}
+        onCancel={close}
+      />
     </>
   )
 }

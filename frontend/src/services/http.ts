@@ -21,6 +21,7 @@ import type {
   Insurance,
   InsuranceCreatePayload,
   LoginCredentials,
+  Notification,
   Patient,
   PatientCreatePayload,
   Prescription,
@@ -169,6 +170,16 @@ export const realApi = {
     return data
   },
 
+  async updateAvailability(id: number, payload: Partial<AvailabilityCreatePayload>): Promise<AvailabilitySlot & { cancelledCount: number }> {
+    const { data } = await http.patch(`/availability/${id}/`, payload)
+    return data
+  },
+
+  async deleteAvailability(id: number): Promise<{ cancelledCount: number }> {
+    const { data } = await http.delete(`/availability/${id}/`)
+    return { cancelledCount: data?.cancelledCount ?? 0 }
+  },
+
   async getDashboard(): Promise<DashboardSummary> {
     const { data } = await http.get('/dashboard/summary/')
     return data
@@ -235,6 +246,16 @@ export const realApi = {
 
   async getBillings(): Promise<Billing[]> {
     const { data } = await http.get('/billing/')
+    return data
+  },
+
+  async getNotifications(): Promise<Notification[]> {
+    const { data } = await http.get('/notifications/')
+    return data
+  },
+
+  async markNotificationRead(id: number): Promise<Notification> {
+    const { data } = await http.patch(`/notifications/${id}/`, { read: true })
     return data
   },
 

@@ -1,10 +1,35 @@
-"""Reglas de negocio de disponibilidad: validación de fechas/horarios y upsert por turno."""
+"""Reglas de negocio de disponibilidad: validación de fechas/horarios, upsert por turno y cancelación de citas afectadas."""
 
 from datetime import date as date_cls
 
-from apps.users.choices import AvailabilityStatus
+from apps.appointments.models import Appointment
+from apps.users.choices import AppointmentStatus, AvailabilityStatus
 
 from .models import Availability
+
+
+def appointments_in_slot(availability: Availability):
+    """Citas programadas (pendientes o confirmadas) de un doctor que caen dentro de la franja de disponibilidad."""
+    from apps.appointments.models import Appointment
+
+    return Appointment.objects.filter(
+        doctor_id=availability.doctor_id,
+        date=availability.date,
+        start_time__lt=availability.end_time,
+        end_time__gt=availability.start_time,
+        status__in=[
+            AppointmentStatus.PENDING.value,
+            AppointmentStatus.CONFIRMED.value,
+        ],
+    )
+
+
+def cancel_appointments_in_slot(availability: Availability) -> int:
+    """Cancela las citas programadas de una franja de disponibilidad y devuelve cuántas fueron afectadas."""
+    affected = appointments_in_slot(availability)
+    count = affected.count()
+    affected.update(status=AppointmentStatus.CANCELLED.value)
+    return count
 
 
 class AvailabilityValidationError(ValueError):

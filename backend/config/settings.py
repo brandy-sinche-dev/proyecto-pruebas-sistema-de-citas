@@ -87,7 +87,7 @@ if all(os.getenv(k) for k in ("POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD
             "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
             "HOST": os.getenv("POSTGRES_HOST", "localhost"),
             "PORT": os.getenv("POSTGRES_PORT", "5432"),
-            "CONN_MAX_AGE": 60,
+            "CONN_MAX_AGE": int(os.getenv("CONN_MAX_AGE", "0")),
         }
     }
 else:

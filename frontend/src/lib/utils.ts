@@ -50,3 +50,18 @@ export function slugify(text: string) {
 export function toTitleCase(text: string) {
   return text.replace(/\b[a-z]/g, (char) => char.toUpperCase())
 }
+
+export function toLocalDateKey(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+export const CANCELLATION_HOURS = 24
+
+export function canCancelAppointment(date: string, startTime: string, now = new Date()) {
+  const start = new Date(`${date}T${startTime}`)
+  const cutoff = new Date(start.getTime() - CANCELLATION_HOURS * 60 * 60 * 1000)
+  return now <= cutoff
+}

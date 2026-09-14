@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { UseMutationResult } from '@tanstack/react-query'
 import type { Appointment } from '@/types'
 
@@ -7,9 +7,16 @@ type StatusMutation = UseMutationResult<Appointment, Error, StatusVariables>
 
 export type TransitionPending = StatusVariables & { patientName: string; code: string }
 
+function apiErrorMessage(err: unknown): string {
+  const data = (err as { response?: { data?: { detail?: string } } })?.response?.data
+  if (data?.detail) return data.detail
+  return err instanceof Error ? err.message : 'No se pudo actualizar la cita'
+}
+
 export function useTransitionConfirm(updateStatus: StatusMutation) {
   const [pending, setPending] = useState<TransitionPending | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const inflight = useRef(false)
 
   function ask(variables: StatusVariables, appointment: Appointment) {
     setError(null)
@@ -21,14 +28,21 @@ export function useTransitionConfirm(updateStatus: StatusMutation) {
   }
 
   function confirm() {
-    if (!pending) return
+    if (!pending || inflight.current) return
+    inflight.current = true
     setError(null)
+    const { id, status } = pending
     updateStatus.mutate(
-      { id: pending.id, status: pending.status },
+      { id, status },
       {
-        onSuccess: () => setPending(null),
-        onError: (err) =>
-          setError(err instanceof Error ? err.message : 'No se pudo actualizar la cita'),
+        onSuccess: () => {
+          inflight.current = false
+          setPending(null)
+        },
+        onError: (err) => {
+          inflight.current = false
+          setError(apiErrorMessage(err))
+        },
       },
     )
   }

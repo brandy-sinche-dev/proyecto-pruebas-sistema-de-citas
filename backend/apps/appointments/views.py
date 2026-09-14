@@ -31,13 +31,14 @@ class AppointmentViewSet(
         return [IsAuthenticated()]
 
     def get_queryset(self):
+        queryset = self.queryset.all()
         user = self.request.user
         if user.is_authenticated:
             if user.role == "patient":
-                return self.queryset.filter(patient__user=user)
+                return queryset.filter(patient__user=user)
             if user.role == "doctor":
-                return self.queryset.filter(doctor__user=user)
-        return self.queryset
+                return queryset.filter(doctor__user=user)
+        return queryset
 
     def get_serializer_class(self):
         if self.action == "create":

@@ -203,11 +203,13 @@ def next_prescription_code(prescription) -> str:
 PRICE_PER_APPOINTMENT = 80
 
 
-def dashboard_stats(serialize) -> dict:
+def dashboard_stats(serialize, user=None) -> dict:
     from django.utils import timezone
 
     today = timezone.localdate()
     qs = Appointment.objects.select_related("patient__user", "doctor__user", "specialty")
+    if user is not None and getattr(user, "role", None) == "doctor":
+        qs = qs.filter(doctor__user_id=user.id)
     total = qs.count()
     attended = qs.filter(status=AppointmentStatus.COMPLETED.value).count()
     cancelled = qs.filter(status=AppointmentStatus.CANCELLED.value).count()
@@ -228,6 +230,7 @@ def dashboard_stats(serialize) -> dict:
         "confirmedCount": today_appointments.filter(status=AppointmentStatus.CONFIRMED.value).count(),
         "checkedInCount": today_appointments.filter(status=AppointmentStatus.CHECKED_IN.value).count(),
         "inConsultationCount": today_appointments.filter(status=AppointmentStatus.CHECKED_IN.value).count(),
+        "attendedCount": today_appointments.filter(status=AppointmentStatus.COMPLETED.value).count(),
         "revenue": attended * PRICE_PER_APPOINTMENT,
         "nextAppointments": serialize(next_appointments),
         "recentAppointments": serialize(qs.order_by("-created_at")[:5]),

@@ -47,6 +47,15 @@ export function Sidebar({ role }: { role: Role }) {
                   {dashboard?.inConsultationCount ?? 0}
                 </span>
               </div>
+              <div className="flex items-center justify-between px-2 py-1.5">
+                <span className="flex items-center gap-1.5 text-sm text-on-surface-variant">
+                  <span className="h-2 w-2 rounded-full bg-teal-600" aria-hidden="true" />
+                  Atendidas
+                </span>
+                <span className="text-sm font-semibold tabular text-on-surface">
+                  {dashboard?.attendedCount ?? 0}
+                </span>
+              </div>
             </div>
           </SidebarSection>
 
