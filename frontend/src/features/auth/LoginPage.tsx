@@ -118,29 +118,10 @@ export function LoginPage() {
 
           <div className="mt-6 rounded-lg border border-slate-200 bg-surface-container-lowest p-4">
             <p className="font-display text-xs font-semibold uppercase tracking-wider text-outline">
-              Cuentas de demostración (API real)
+              Cuentas de demostración
             </p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {demoUsers.map((demo) => (
-                <button
-                  key={demo.username}
-                  type="button"
-                  onClick={() => {
-                    setValue('username', demo.username)
-                    setValue('password', 'ClinicaAngry1')
-                  }}
-                  className="flex items-center gap-2 rounded-lg border border-slate-200 bg-surface-bright px-3 py-2 text-xs text-on-surface hover:border-secondary hover:bg-success-50"
-                >
-                  <span className="material-symbols-outlined text-base text-secondary">{demo.icon}</span>
-                  <span className="text-left">
-                    <span className="block font-semibold">{demo.role}</span>
-                    <span className="block text-on-surface-variant">@{demo.username}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-            <p className="mt-3 text-xs text-on-surface-variant">
-              Contraseña común del seed: <code>ClinicaAngry1</code>
+            <p className="mt-2 text-xs text-on-surface-variant">
+              Consulta el <code>README.md</code> para las credenciales de prueba.
             </p>
           </div>
 

@@ -83,6 +83,17 @@ docker compose exec backend uv run python manage.py migrate
 docker compose exec backend uv run python manage.py seed_demo
 ```
 
+### Cuentas de demostración (para pruebas)
+
+Tras ejecutar el seed, puedes usar las siguientes credenciales para probar la aplicación:
+
+| Rol | Usuario | Contraseña |
+| --- | --- | --- |
+| Administrador | `admin` | `ClinicaAngry1` |
+| Recepcionista | `recepcion` | `ClinicaAngry1` |
+| Médico | `dra.ramos` | `ClinicaAngry1` |
+| Paciente | `paciente` | `ClinicaAngry1` |
+
 6. Abrir el frontend en el navegador.
 7. Abrir Swagger de la API.
 
