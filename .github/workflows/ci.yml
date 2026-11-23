@@ -125,6 +125,7 @@ jobs:
       - name: Levantar stack (Postgres + API + frontend)
         env:
           DJANGO_TIME_ZONE: UTC
+          VITE_USE_MOCK: "false"
         run: docker compose up -d --build --wait
       - name: Humo E2E (@smoke)
         working-directory: frontend
