@@ -14,7 +14,7 @@ import { ErrorState, Spinner } from '@/components/ui/Feedback'
 import { useAppointments, useConsultationNotes, useDoctors, useMutations, usePatients, usePrescriptions } from '@/hooks/queries'
 import { useAuth } from '@/hooks/useAuth'
 import { transitionCopy, useTransitionConfirm } from '@/hooks/useTransitionConfirm'
-import { formatDateTime } from '@/lib/utils'
+import { formatDateTime, isUpcomingSlot } from '@/lib/utils'
 
 const noteSchema = z.object({
   appointmentId: z.coerce.number().int().positive('Selecciona una cita'),
@@ -208,14 +208,16 @@ export function DoctorClinicalRecordsPage() {
         <form className="flex flex-col gap-4" noValidate onSubmit={onSubmit}>
           <Select label="Cita" error={errors.appointmentId?.message} {...register('appointmentId')}>
             <option value="">Selecciona la cita</option>
-            {(appointments ?? []).map((appointment) => {
-              const patient = (patients ?? []).find((p) => p.id === appointment.patientId)
-              return (
-                <option key={appointment.id} value={appointment.id}>
-                  {appointment.date} {appointment.startTime} — {patient ? `${patient.firstName} ${patient.lastName}` : appointment.patientName}
-                </option>
-              )
-            })}
+            {(appointments ?? [])
+              .filter((appointment) => isUpcomingSlot(appointment.date))
+              .map((appointment) => {
+                const patient = (patients ?? []).find((p) => p.id === appointment.patientId)
+                return (
+                  <option key={appointment.id} value={appointment.id}>
+                    {appointment.date} {appointment.startTime} — {patient ? `${patient.firstName} ${patient.lastName}` : appointment.patientName}
+                  </option>
+                )
+              })}
           </Select>
           <Input label="Diagnóstico" placeholder="Ej.: Hipertensión arterial" error={errors.diagnosis?.message} {...register('diagnosis')} />
           <Textarea label="Tratamiento" placeholder="Indicaciones médicas..." error={errors.treatment?.message} {...register('treatment')} />

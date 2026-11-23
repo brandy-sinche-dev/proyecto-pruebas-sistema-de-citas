@@ -12,7 +12,7 @@ import { Modal } from '@/components/ui/Modal'
 import { ErrorState, Spinner } from '@/components/ui/Feedback'
 import { useAppointments, useDoctors, useMutations, usePatients, usePrescriptions } from '@/hooks/queries'
 import { useAuth } from '@/hooks/useAuth'
-import { formatDate } from '@/lib/utils'
+import { formatDate, isUpcomingSlot } from '@/lib/utils'
 import type { MedicationInput, Prescription } from '@/types'
 
 const prescriptionSchema = z.object({
@@ -155,14 +155,16 @@ export function DoctorPrescriptionsPage() {
         <form className="flex flex-col gap-4" noValidate onSubmit={onSubmit}>
           <Select label="Cita" error={errors.appointmentId?.message} {...register('appointmentId')}>
             <option value="">Selecciona la cita</option>
-            {(appointments ?? []).map((appointment) => {
-              const patient = (patients ?? []).find((p) => p.id === appointment.patientId)
-              return (
-                <option key={appointment.id} value={appointment.id}>
-                  {appointment.date} {appointment.startTime} — {patient ? `${patient.firstName} ${patient.lastName}` : appointment.patientName}
-                </option>
-              )
-            })}
+            {(appointments ?? [])
+              .filter((appointment) => isUpcomingSlot(appointment.date))
+              .map((appointment) => {
+                const patient = (patients ?? []).find((p) => p.id === appointment.patientId)
+                return (
+                  <option key={appointment.id} value={appointment.id}>
+                    {appointment.date} {appointment.startTime} — {patient ? `${patient.firstName} ${patient.lastName}` : appointment.patientName}
+                  </option>
+                )
+              })}
           </Select>
 
           <div className="flex flex-col gap-2">

@@ -58,6 +58,10 @@ export function toLocalDateKey(date: Date): string {
   return `${y}-${m}-${d}`
 }
 
+export function isUpcomingSlot(dateKey: string, todayKey = toLocalDateKey(new Date())) {
+  return dateKey >= todayKey
+}
+
 export const CANCELLATION_HOURS = 24
 
 export function canCancelAppointment(date: string, startTime: string, now = new Date()) {

@@ -35,7 +35,7 @@ class AvailabilityViewSet(
         user = self.request.user
         if user.is_authenticated and user.role == "doctor":
             return self.queryset.filter(doctor__user=user)
-        return self.queryset
+        return self.queryset.all()
 
     def get_serializer_class(self):
         if self.action == "create":

@@ -3,6 +3,7 @@
 import datetime
 
 from django.core.management.base import BaseCommand
+from django.db.models import F
 from django.utils import timezone
 
 from apps.appointments.models import Appointment, ClinicalExam, ConsultationNote, Medication, Prescription
@@ -148,7 +149,21 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if User.objects.exists():
-            self.stdout.write(self.style.WARNING("Ya existen usuarios; el seed no se vuelve a ejecutar."))
+            first_availability = Availability.objects.order_by("date").first()
+            if first_availability is None:
+                self.stdout.write(self.style.WARNING("Ya existen usuarios; el seed no se vuelve a ejecutar."))
+                return
+
+            delta = timezone.localdate() - first_availability.date
+            if delta.days == 0:
+                self.stdout.write(self.style.SUCCESS("Los datos de demostración ya están actualizados."))
+                return
+
+            Availability.objects.update(date=F("date") + delta)
+            Appointment.objects.update(date=F("date") + delta)
+            self.stdout.write(
+                self.style.SUCCESS(f"Fechas de demostración actualizadas {delta.days} días.")
+            )
             return
 
         specialties = {
