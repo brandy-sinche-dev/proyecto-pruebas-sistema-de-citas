@@ -14,7 +14,7 @@ import { AlertBanner, ErrorState, Spinner } from '@/components/ui/Feedback'
 import { useAppointments, useAvailability, useDoctors, useMutations } from '@/hooks/queries'
 import { useAuth } from '@/hooks/useAuth'
 import { availabilitySchema } from '@/schemas'
-import { formatDate, toLocalDateKey } from '@/lib/utils'
+import { formatDate, isUpcomingSlot, toLocalDateKey } from '@/lib/utils'
 import type { Appointment, AvailabilitySlot } from '@/types'
 
 type AvailabilityFormValues = z.infer<typeof availabilitySchema>
@@ -78,7 +78,11 @@ export function DoctorAvailabilityPage() {
 
   const doctorId = (doctors ?? []).find((doctor) => doctor.email === user?.email)?.id
 
-  const mine = doctorId ? (slots ?? []).filter((slot) => slot.doctorId === doctorId) : (slots ?? [])
+  const upcomingSlots = (slots ?? []).filter((slot) => isUpcomingSlot(slot.date, todayKey))
+
+  const mine = doctorId
+    ? upcomingSlots.filter((slot) => slot.doctorId === doctorId)
+    : upcomingSlots
 
   const deletingCount = deleting
     ? countInRange(appointments, deleting.doctorId, deleting.date, deleting.startTime, deleting.endTime)

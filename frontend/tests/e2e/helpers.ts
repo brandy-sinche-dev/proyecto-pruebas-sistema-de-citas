@@ -27,10 +27,11 @@ export async function findAvailableSlot(page: Page): Promise<boolean> {
   const fechaInput = page.getByLabel('Fecha');
   const hora = page.getByLabel('Hora disponible');
   const sinHorarios = page.getByText(/no hay horarios publicados/i);
+  const hoy = new Date();
 
-  for (let dias = 0; dias <= 7; dias++) {
-    const fecha = new Date();
-    fecha.setDate(fecha.getDate() + dias);
+  for (let offset = 0; offset <= 8; offset++) {
+    const fecha = new Date(hoy);
+    fecha.setDate(hoy.getDate() + offset);
     const fechaTexto = [
       fecha.getFullYear(),
       String(fecha.getMonth() + 1).padStart(2, '0'),
@@ -44,7 +45,14 @@ export async function findAvailableSlot(page: Page): Promise<boolean> {
       return conHorarios || (await sinHorarios.isVisible());
     }).toBe(true);
 
-    if ((await hora.locator('option').count()) > 1) return true;
+    if ((await hora.locator('option').count()) <= 1) continue;
+
+    const primeraHora = await hora.locator('option').nth(1).getAttribute('value');
+    if (!primeraHora) continue;
+
+    await hora.selectOption(primeraHora);
+    await expect(hora).toHaveValue(primeraHora);
+    return true;
   }
 
   return false;

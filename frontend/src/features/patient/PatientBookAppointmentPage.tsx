@@ -239,7 +239,7 @@ export function PatientBookAppointmentPage() {
             <span />
           )}
           {step < 2 ? (
-            <Button type="button" onClick={nextStep} disabled={step === 0 && (!specialtyId || !doctorId)}>
+            <Button type="button" onClick={(event) => { event.preventDefault(); nextStep() }} disabled={step === 0 && (!specialtyId || !doctorId)}>
               Continuar
             </Button>
           ) : (
