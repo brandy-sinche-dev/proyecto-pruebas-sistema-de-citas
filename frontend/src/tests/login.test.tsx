@@ -27,12 +27,10 @@ afterEach(() => {
 })
 
 describe('LoginPage', () => {
-  it('muestra las cuentas de demostración', () => {
+  it('muestra el aviso de credenciales de demostración en el README', () => {
     renderWithProviders()
-    expect(screen.getByText('Cuentas de demostración (API real)')).toBeInTheDocument()
-    expect(screen.getByText('@admin')).toBeInTheDocument()
-    expect(screen.getByText('@dra.ramos')).toBeInTheDocument()
-    expect(screen.getByText('@paciente')).toBeInTheDocument()
+    expect(screen.getByText('Cuentas de demostración')).toBeInTheDocument()
+    expect(screen.getByText(/README\.md/)).toBeInTheDocument()
   })
 
   it('exige usuario y contraseña', async () => {
@@ -61,7 +59,8 @@ describe('LoginPage', () => {
     const user = userEvent.setup()
     renderWithProviders()
 
-    await user.click(screen.getByText('@admin'))
+    await user.type(screen.getByLabelText('Usuario'), 'admin')
+    await user.type(screen.getByLabelText('Contraseña'), 'ClinicaAngry1')
     await user.click(screen.getByRole('button', { name: 'Ingresar' }))
 
     expect(await screen.findByText('Panel de administración')).toBeInTheDocument()

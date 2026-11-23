@@ -14,7 +14,7 @@ from apps.tests.factories import (
     PatientUserFactory,
 )
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.regresion]
 
 
 @pytest.fixture
@@ -59,6 +59,7 @@ class TestAppointmentPermissions:
 
 
 class TestAppointmentCreate:
+    @pytest.mark.smoke
     def test_create_success(self, auth_client, setup):
         avail = future_slot(setup["doctor"])
         client = auth_client(setup["admin"])
@@ -160,6 +161,7 @@ class TestAppointmentTransitions:
         assert response.status_code == 200
         assert response.data["status"] == "COMPLETED"
 
+    @pytest.mark.smoke
     def test_cancel_after_window(self, auth_client, setup, pending_appointment):
         future = AppointmentFactory(
             patient=setup["patient"],
@@ -193,6 +195,7 @@ class TestAppointmentTransitions:
         response = client.post(f"/api/v1/appointments/{cancelled.id}/complete/", format="json")
         assert response.status_code == 400
 
+    @pytest.mark.smoke
     def test_patient_cancels_own_appointment(self, auth_client, setup):
         future = AppointmentFactory(
             patient=setup["patient"],

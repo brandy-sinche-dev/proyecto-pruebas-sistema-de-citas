@@ -1,7 +1,7 @@
 
 import { test, expect } from '@playwright/test';
 
-test('CP03 - Validar inicio de sesión con campos vacíos', async ({ page }) => {
+test('CP03 - Validar inicio de sesión con campos vacíos @regresion', async ({ page }) => {
   await page.goto('/login');
 
   await page.getByRole('button', { name: 'Ingresar' }).click();
@@ -12,7 +12,7 @@ test('CP03 - Validar inicio de sesión con campos vacíos', async ({ page }) => 
   ).toBeVisible();
 });
 
-test('CP02 - Rechazar contraseña incorrecta', async ({ page }) => {
+test('CP02 - Rechazar contraseña incorrecta @regresion', async ({ page }) => {
   await page.goto('/login');
 
   await page.getByLabel('Usuario').fill('admin');
@@ -20,7 +20,7 @@ test('CP02 - Rechazar contraseña incorrecta', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Ingresar' }).click();
 
-  await expect(page.getByText(/incorrect|inválid|credenciales|error/i)).toBeVisible();
+  await expect(page.getByRole('status')).toContainText(/incorrect|inválid|credenciales|error/i);
   await expect(page).toHaveURL(/\/login$/);
 
 
@@ -28,7 +28,7 @@ test('CP02 - Rechazar contraseña incorrecta', async ({ page }) => {
 });
 
 
-test('CP01 - Iniciar sesión correctamente', async ({ page }) => {
+test('CP01 - Iniciar sesión correctamente @smoke @regresion', async ({ page }) => {
   await page.goto('/login');
 
   await page.getByLabel('Usuario').fill('admin');

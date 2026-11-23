@@ -10,13 +10,6 @@ import { Input } from '@/components/ui/Input'
 import { AlertBanner } from '@/components/ui/Feedback'
 import { roleHome } from '@/features/layout/navigation'
 
-const demoUsers = [
-  { role: 'Administrador', username: 'admin', icon: 'shield_person' },
-  { role: 'Recepcionista', username: 'recepcion', icon: 'support_agent' },
-  { role: 'Médico', username: 'dra.ramos', icon: 'stethoscope' },
-  { role: 'Paciente', username: 'paciente', icon: 'person' },
-]
-
 export function LoginPage() {
   const { login, isAuthenticated, user } = useAuth()
   const navigate = useNavigate()
@@ -24,7 +17,6 @@ export function LoginPage() {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) })
 

@@ -4,7 +4,7 @@ import pytest
 
 from apps.tests.factories import AdminFactory, PatientUserFactory
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.regresion]
 
 
 class TestHealth:
@@ -15,6 +15,7 @@ class TestHealth:
 
 
 class TestRegister:
+    @pytest.mark.smoke
     def test_register_creates_patient(self, api_client):
         response = api_client.post(
             "/api/v1/auth/register/",
@@ -59,6 +60,7 @@ class TestRegister:
 
 
 class TestLogin:
+    @pytest.mark.smoke
     def test_login_returns_tokens_and_user(self, api_client):
         admin = AdminFactory()
         response = api_client.post(

@@ -19,7 +19,7 @@ from apps.tests.factories import (
     PatientProfileFactory,
 )
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.regresion]
 
 
 def make_doctor_with_availability():
