@@ -1,17 +1,9 @@
 
 import { test, expect } from '@playwright/test';
+import { loginAsPatient } from './helpers';
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/login');
-
-  await page.getByLabel('Usuario').fill('paciente');
-  await page.getByLabel('Contraseña', { exact: true }).fill('Clave123');
-
-  await page.getByRole('button', {
-    name: /ingresar|iniciar sesión/i,
-  }).click();
-
-  await page.waitForURL(/paciente/);
+  await loginAsPatient(page);
   await page.goto('/paciente/citas');
 });
 

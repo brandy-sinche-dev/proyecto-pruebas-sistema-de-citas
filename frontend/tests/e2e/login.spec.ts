@@ -20,7 +20,7 @@ test('CP02 - Rechazar contraseña incorrecta @regresion', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Ingresar' }).click();
 
-  await expect(page.getByText(/incorrect|inválid|credenciales|error/i)).toBeVisible();
+  await expect(page.getByRole('status')).toContainText(/incorrect|inválid|credenciales|error/i);
   await expect(page).toHaveURL(/\/login$/);
 
 
