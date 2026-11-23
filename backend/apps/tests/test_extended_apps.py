@@ -21,7 +21,7 @@ from apps.tests.factories import (
     ReceptionistFactory,
 )
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.regresion]
 
 
 @pytest.fixture

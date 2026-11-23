@@ -32,6 +32,10 @@ python_files = ["test_*.py", "*_tests.py", "tests.py"]
 testpaths = ["apps", "tests"]
 addopts = "-ra --cov=apps --cov=config --cov-report=term-missing --cov-fail-under=80"
 filterwarnings = ["ignore::DeprecationWarning"]
+markers = [
+    "smoke: casos críticos de humo (login, registro, reservar y cancelar cita)",
+    "regresion: suite completa de regresión de la API",
+]
 
 [tool.coverage.run]
 branch = true

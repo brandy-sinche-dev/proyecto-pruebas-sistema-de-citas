@@ -18,7 +18,7 @@ from apps.tests.factories import (
     UserFactory,
 )
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.regresion]
 
 MEDICATIONS = [{"name": "Ibuprofeno", "dosage": "400mg", "frequency": "Cada 8h", "duration": "5 dias"}]
 
