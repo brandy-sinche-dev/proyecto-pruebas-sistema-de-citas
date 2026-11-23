@@ -9,13 +9,13 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/paciente/agendar');
 });
 
-test('CP13 - No permite continuar sin elegir especialidad y médico', async ({ page }) => {
+test('CP13 - No permite continuar sin elegir especialidad y médico @regresion', async ({ page }) => {
   await expect(page.getByLabel('Especialidad')).toBeVisible();
   await expect(page.getByLabel('Médico')).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Continuar' })).toBeDisabled();
 });
 
-test('CP14 - Permite avanzar al paso de fecha y hora al elegir especialidad y médico', async ({ page }) => {
+test('CP14 - Permite avanzar al paso de fecha y hora al elegir especialidad y médico @smoke @regresion', async ({ page }) => {
   const specialty = page.getByLabel('Especialidad');
   await expect(specialty).toBeVisible();
 
@@ -33,7 +33,7 @@ test('CP14 - Permite avanzar al paso de fecha y hora al elegir especialidad y m�
 });
 
 
-test('CP18 - No avanzar sin seleccionar fecha y hora', async ({ page }) => {
+test('CP18 - No avanzar sin seleccionar fecha y hora @regresion', async ({ page }) => {
   const specialty = page.getByLabel('Especialidad');
   await expect.poll(async () => specialty.locator('option').count()).toBeGreaterThan(1);
   await specialty.selectOption({ index: 1 });
@@ -50,7 +50,7 @@ test('CP18 - No avanzar sin seleccionar fecha y hora', async ({ page }) => {
   await expect(page.getByText('2. Fecha y hora')).toBeVisible();
 });
 
-test('CP19 - Volver al paso de especialidad y médico', async ({ page }) => {
+test('CP19 - Volver al paso de especialidad y médico @regresion', async ({ page }) => {
   const specialty = page.getByLabel('Especialidad');
   await expect.poll(async () => specialty.locator('option').count()).toBeGreaterThan(1);
   await specialty.selectOption({ index: 1 });
@@ -67,7 +67,7 @@ test('CP19 - Volver al paso de especialidad y médico', async ({ page }) => {
   await expect(page.getByLabel('Médico')).toBeVisible();
 });
 
-test('CP20 - Mostrar aviso cuando no hay horarios disponibles', async ({ page }) => {
+test('CP20 - Mostrar aviso cuando no hay horarios disponibles @regresion', async ({ page }) => {
   const specialty = page.getByLabel('Especialidad');
   await expect.poll(async () => specialty.locator('option').count()).toBeGreaterThan(1);
   await specialty.selectOption({ index: 1 });
@@ -87,7 +87,7 @@ test('CP20 - Mostrar aviso cuando no hay horarios disponibles', async ({ page })
 });
 
 
-test('CP21 - Permitir dejar vacío el motivo de consulta', async ({ page }) => {
+test('CP21 - Permitir dejar vacío el motivo de consulta @smoke @regresion', async ({ page }) => {
   const specialty = page.getByLabel('Especialidad');
   await expect.poll(() => specialty.locator('option').count()).toBeGreaterThan(1);
   await specialty.selectOption({ index: 1 });

@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/paciente/citas');
 });
 
-test('CP15 - Mostrar la sección Mis citas', async ({ page }) => {
+test('CP15 - Mostrar la sección Mis citas @smoke @regresion', async ({ page }) => {
   await expect(
     page.getByRole('heading', { name: 'Mis citas', exact: true })
   ).toBeVisible();
@@ -25,7 +25,7 @@ test('CP15 - Mostrar la sección Mis citas', async ({ page }) => {
   ).toBeVisible();
 });
 
-test('CP16 - Ver las columnas del historial de citas', async ({ page }) => {
+test('CP16 - Ver las columnas del historial de citas @regresion', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Historial de mis citas' }))
     .toBeVisible();
 
@@ -36,7 +36,7 @@ test('CP16 - Ver las columnas del historial de citas', async ({ page }) => {
 });
 
 
-test('CP17 - Cerrar sesión del paciente', async ({ page }) => {
+test('CP17 - Cerrar sesión del paciente @regresion', async ({ page }) => {
   await expect(
     page.getByRole('button', { name: 'Cerrar sesión' })
   ).toBeVisible();

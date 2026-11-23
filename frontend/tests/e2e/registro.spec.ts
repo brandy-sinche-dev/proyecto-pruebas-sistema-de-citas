@@ -1,7 +1,7 @@
 
 import { test, expect } from '@playwright/test';
 
-test('CP11 - Validar registro con campos vacíos', async ({ page }) => {
+test('CP11 - Validar registro con campos vacíos @regresion', async ({ page }) => {
   await page.goto('/registro');
 
   await page.getByRole('button', { name: 'Registrarme' }).click();
@@ -10,7 +10,7 @@ test('CP11 - Validar registro con campos vacíos', async ({ page }) => {
   await expect(page.getByText(/apellido/i).first()).toBeVisible();
 });
 
-test('CP12 - Rechazar correo electrónico inválido', async ({ page }) => {
+test('CP12 - Rechazar correo electrónico inválido @smoke @regresion', async ({ page }) => {
   await page.goto('/registro');
 
   await page.getByLabel('Nombre').fill('María');
