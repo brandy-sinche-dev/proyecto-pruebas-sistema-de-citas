@@ -67,10 +67,8 @@ test('CP21 - Permitir dejar vacío el motivo de consulta @smoke @regresion', asy
   const horarioEncontrado = await findAvailableSlot(page);
   expect(horarioEncontrado, 'Debe existir un horario disponible').toBeTruthy();
 
-  const hora = page.getByLabel('Hora disponible');
-  await hora.selectOption({ index: 1 });
   await page.getByRole('button', { name: 'Continuar' }).click();
-
+  await expect(page.getByText('3. Confirmación')).toBeVisible();
   await expect(
     page.getByLabel('Motivo de la consulta (opcional)')
   ).toBeVisible();
@@ -78,4 +76,6 @@ test('CP21 - Permitir dejar vacío el motivo de consulta @smoke @regresion', asy
   await expect(
     page.getByRole('button', { name: /confirmar reserva/i })
   ).toBeVisible();
+  await page.getByRole('button', { name: /confirmar reserva/i }).click();
+  await expect(page.getByText('¡Cita solicitada!')).toBeVisible();
 });

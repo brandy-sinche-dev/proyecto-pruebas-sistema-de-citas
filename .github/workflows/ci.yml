@@ -77,6 +77,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Levantar stack completo (build + healthchecks)
+        env:
+          DJANGO_TIME_ZONE: UTC
         run: docker compose up -d --build --wait
       - name: Smoke test API
         run: |
@@ -121,6 +123,8 @@ jobs:
         working-directory: frontend
         run: pnpm exec playwright install --with-deps chromium
       - name: Levantar stack (Postgres + API + frontend)
+        env:
+          DJANGO_TIME_ZONE: UTC
         run: docker compose up -d --build --wait
       - name: Humo E2E (@smoke)
         working-directory: frontend
